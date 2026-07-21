@@ -7,16 +7,16 @@ TiimoとClawBrifは、どちらも実行機能の負荷を外部化し、「次�
 ```text
 外部情報を受け取る
     ↓
-ClawBrif: 注意を配分し、探索から戻る
+ClawBrif: 注意を配分し、応答状態を伝え、探索や集中から戻る
     ↓ 必要な行動だけを本人が確定
 Planner: いつ実行するか決める
     ↓
 Tiimo: Todoを予定へ変え、1件へ集中する
 ```
 
-Tiimoは主に`Capture → Plan → Act`を扱う計画・実行支援アプリです。ClawBrifはその手前と周囲にある`Observe → Protect → Explore → Capture curiosity → Return`を扱います。
+Tiimoは主に`Capture → Plan → Act`を扱う計画・実行支援アプリです。ClawBrifはその手前と周囲にある`Observe → Protect → Signal → Explore / Focus → Capture curiosity → Return`を扱います。
 
-したがって、ClawBrifはTiimoの代替クローンではありません。Tiimoから学ぶのは、認知状態ごとの責務分離、粗い時間表現、Focusへの絞り込みです。独自に検証するのは、有限ブリーフ、Curiosity Capture、Return Anchorによる注意遷移です。
+したがって、ClawBrifはTiimoの代替クローンではありません。Tiimoから学ぶのは、認知状態ごとの責務分離、粗い時間表現、Focusへの絞り込みです。独自に検証するのは、有限ブリーフ、Attention Signal、Curiosity Capture、Return Anchorによる注意遷移です。
 
 ## 比較の前提
 
@@ -36,22 +36,22 @@ Tiimoは主に`Capture → Plan → Act`を扱う計画・実行支援アプリ�
 | 中心課題 | やることを忘れず、時間へ配置し、実行する | 外部情報に注意を奪われても、義務と元作業を見失わずに戻る |
 | 主な入力 | 本人が作るTodo、Activity、routine、外部calendar | 常駐Agentが正規化したGmail、RSSなどのObservation |
 | 最初の判断 | 何をTodoとして残すか | 何を守るか、何を探索するか、何を無視するか |
-| 中心entity | Todo、Activity、Checklist、Focus | Observation、Topic、DecisionCandidate、ProtectedIntent、CuriosityCapture、ReturnAnchor |
+| 中心entity | Todo、Activity、Checklist、Focus | Observation、Topic、DecisionCandidate、ProtectedIntent、AttentionSignal、CuriosityCapture、ReturnAnchor |
 | 時間の扱い | Todoを時刻・時間帯のあるActivityへ変える | 必要な行動だけ予定案にし、明示確認後に外部calendarへ渡す |
 | 実行支援 | Focus画面で今のActivityを1件へ絞る | Return Anchorで探索前の作業と次の一手を再提示する |
 | 情報量の制御 | 週次PlanからFocusの1件へ絞る | 最大6 topic、残件数、推定時間、明示的終端を持つbriefにする |
 | Captureの意味 | 実行候補をTodoとして保存する | 気になった問いを義務にせずCuriosity Captureへ退避する |
 | AIの役割 | title/descriptionからchecklist、emoji、tag候補を作る | topic化、返信候補、表示理由、根拠、不明点、確信度を提示する |
-| 人間の役割 | Todo作成、schedule、開始、pause、complete | 今日扱う、後で、対象外、委任候補、探索継続、Returnを決める |
-| 自動化の境界 | Activity/Todo CRUD、同期、通知を製品内で所有する | 収集・提案は自動化し、送信・calendar書き込み・委任は自動化しない |
-| 通知 | Activityのlocal通知とremote push/in-app message | 有限briefの時刻とReturnの手掛かり。強制blockは行わない |
-| 設計上の成果 | Todo、予定、Focusを接続する。実際の製品効果は静的解析から判断できない | 好奇心の価値を保ったまま、探索超過と意図の見落としを減らすことを仮説として検証する |
-| 評価 | APKから製品効果は判断できない | 探索超過、意図の見落とし、Return、着想価値、自律性を比較検証する |
+| 人間の役割 | Todo作成、schedule、開始、pause、complete | 今日扱う、Signal共有、探索継続、Returnを決める |
+| 自動化の境界 | Activity/Todo CRUD、同期、通知を製品内で所有する | 収集・提案は自動化し、Signal・calendar書き込みは本人操作後だけ行う。返信・委任は自動化しない |
+| 通知・状態共有 | Activityのlocal通知とremote push/in-app message | 有限brief、Returnの手掛かり、expiration付きSlack status。強制blockは行わない |
+| 設計上の成果 | Todo、予定、Focusを接続する。実際の製品効果は静的解析から判断できない | 探索超過と意図の見落としを減らし、集中中の応答状態を周囲へ伝えることを仮説として検証する |
+| 評価 | APKから製品効果は判断できない | 探索超過、Return、着想価値、自律性、復帰予測、privacy discomfortを比較検証する |
 | 実装状態 | React Native + Expoと複数backend境界を確認 | 実装未着手。現在は研究文書とGC-01 fixtureがcontract |
 
 ## 共通点
 
-1. Todo、Activity、Focusや、Protect、Explore、Returnのように認知状態を段階へ分ける
+1. Todo、Activity、Focusや、Protect、Signal、Explore、Returnのように認知状態を段階へ分ける
 2. 全情報を同時に見せず、現在の判断または操作へ表示を絞る
 3. checklistやnextActionにより、再開・着手時の最初の操作を小さくする
 4. AI出力をentityの最終決定ではなく、人間が採否を決める候補として扱う
@@ -76,7 +76,7 @@ Focus
 
 Todoは未確定の実行候補、Activityは日時や時間帯を持つ予定、Focusは今取り組むActivityです。正確な時刻を決められない場合も、朝・昼・夜・いつでもという粗い配置を正式な状態として扱います。
 
-### ClawBrif: Observe → Protect → Explore → Return
+### ClawBrif: Observe → Protect → Signal → Explore / Focus → Return
 
 ClawBrifでは、情報接触の前後を次の場面へ分けます。
 
@@ -87,14 +87,17 @@ Observation
 Protect
 見失いたくない意図は何か
     ↓ 本人が確定
-Explore
-有限の情報から何を知るか
+Signal
+応答状態と復帰予定を周囲へ伝えるか
+    ↓ 本人が共有を選択
+Explore / Focus
+有限の情報から何を知るか、何へ集中するか
     ↓ 問いだけ退避
 Return
 探索前のどこへ戻るか
 ```
 
-Protectは義務の完了を要求しません。Exploreへの入場券にもなりません。本人が守ると決めたものだけをProtectedIntentにし、必要なら外部plannerへ予定案として渡します。
+Protectは義務の完了を要求しません。SignalもExploreやFocusへの入場券ではありません。本人が守ると決めたものだけをProtectedIntentにし、必要なら外部plannerへ予定案として渡します。Signalを選んだ場合だけ、expiration付きのavailabilityをSlackなどへ出力します。
 
 ## 同じ言葉でも役割が異なる
 

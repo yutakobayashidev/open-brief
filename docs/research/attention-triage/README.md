@@ -17,7 +17,9 @@ Observation Inbox
     ↓ 重複排除・トピック化・根拠保持
 Protect: 見失いたくない意図を最大3件だけ確認
     ↓
-Explore: 最大6件の有限ブリーフ
+Signal: 応答状態と復帰予定を本人確認後に周囲へ共有
+    ↓
+Explore / Focus: 最大6件の有限ブリーフ、または集中作業
     ↓
 Capture: 気になった問いを義務にせず退避
     ↓
@@ -37,6 +39,7 @@ Return: 探索前の作業と次の一手を再提示
 | [03 Golden case](03-golden-case.md) | Gmail＋RSSを使う理想的な1セッションを共有する |
 | [04 Study protocol](04-study-protocol.md) | N-of-1と小規模比較研究を実施する |
 | [05 Tiimo comparison](05-tiimo-comparison.md) | 静的解析したTiimoとClawBrifの共通点・相違点を確認する |
+| [06 Objective assessment](06-objective-assessment.md) | 構想の強み、kill risk、継続・停止条件を確認する |
 | [GC-01 fixture](../../../fixtures/golden-cases/gc-01-gmail-rss-return.json) | ゴールデンケースを実装・テスト用の入力と期待状態として使う |
 
 ## 根拠の読み方
@@ -69,6 +72,7 @@ Oracleと文献調査が一致した重要点は次です。
 
 - 義務系の最初のsource: Gmail
 - 好奇心系の最初のsource: RSS / OPML
-- Slack: Gmail＋RSSで中核仮説を検証した後に追加
+- Slack message input: Gmail＋RSSで中核仮説を検証した後に追加
+- Slack status output: 最初のOutput Adapterとして、本人操作とexpiration付きで追加
 - カレンダー書き込み: ユーザーの明示確認後だけ
 - 自動返信、自動委任、強制ブロック: MVP対象外
