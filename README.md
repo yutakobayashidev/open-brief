@@ -11,6 +11,7 @@ Androidアプリの静的解析と認知科学・HCI研究を、独立したAtte
 
 - [研究概要と目次](docs/research/attention-triage/README.md)
 - [Gmail＋RSSゴールデンケース](docs/research/attention-triage/03-golden-case.md)
+- [GC-01実装fixture](fixtures/golden-cases/gc-01-gmail-rss-return.json)
 - [評価プロトコル](docs/research/attention-triage/04-study-protocol.md)
 
 解析対象APKは `apks/com.tiimo.androidappreactnative/` に置かれています。APKや復元コードを配布・転載することを目的としていません。

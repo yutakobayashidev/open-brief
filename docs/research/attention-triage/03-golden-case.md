@@ -1,5 +1,7 @@
 # 03. Gmail＋RSSゴールデンケース
 
+実装・テストで使う機械可読版は[GC-01 fixture](../../../fixtures/golden-cases/gc-01-gmail-rss-return.json)です。fixtureの入力境界は、Gmail/RSSの生データではなく、常駐Agentが共通形式へ正規化した直後の`Observation`です。
+
 ## ゴール
 
 > 面白いニュースを安心して探索し、得た着想を失わず、探索前の作業と今日必要な返信へ戻れる。
@@ -220,3 +222,5 @@ BriefSession ─ ReturnAnchor ─ ExplorationSession ─ ReturnOutcome
 - SlackのDM、mention、channel流量へ同じ効果を一般化できない
 
 実際のReturnは、対象アプリでの最初の操作、Focus再開、または短い自己報告で別に測定します。
+
+fixtureでは自然言語の完全一致を要求しません。source coverage、provenance、状態遷移、副作用の有無を契約とし、所要時間や主観評価はE2E計測または研究指標として扱います。
