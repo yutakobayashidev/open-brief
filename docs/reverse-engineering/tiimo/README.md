@@ -27,6 +27,7 @@ Tiimoの中心的なドメイン分離は次の3段階です。
 | [05 Reimplementation blueprint](05-reimplementation-blueprint.md) | 独自アプリの決定済みアーキテクチャと開発順序 |
 | [06 Security, privacy, limitations](06-security-privacy-and-limitations.md) | クリーンルーム方針、個人情報、解析限界 |
 | [Evidence](evidence/observations.md) | コマンド、ハッシュ、根拠となる観測一覧 |
+| [TiimoとClawBrifの比較](../../research/attention-triage/05-tiimo-comparison.md) | 観測したTiimoと独自Attention Triage構想の境界 |
 
 ## 確度の表記
 

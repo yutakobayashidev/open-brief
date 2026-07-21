@@ -36,6 +36,7 @@ Return: 探索前の作業と次の一手を再提示
 | [02 Product model](02-product-model-and-hypotheses.md) | 製品仮説、設計原則、反証条件を確認する |
 | [03 Golden case](03-golden-case.md) | Gmail＋RSSを使う理想的な1セッションを共有する |
 | [04 Study protocol](04-study-protocol.md) | N-of-1と小規模比較研究を実施する |
+| [05 Tiimo comparison](05-tiimo-comparison.md) | 静的解析したTiimoとClawBrifの共通点・相違点を確認する |
 | [GC-01 fixture](../../../fixtures/golden-cases/gc-01-gmail-rss-return.json) | ゴールデンケースを実装・テスト用の入力と期待状態として使う |
 
 ## 根拠の読み方
