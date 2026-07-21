@@ -1,0 +1,15 @@
+# Third-party binaries and local reverse-engineering material
+/apks/
+/artifacts/
+
+# Generated mobile-analysis outputs
+*.apk
+*.aab
+*.apks
+*.dex
+*.hbc
+*.hasm
+index.android.bundle
+*-decompiled.*
+/jadx-output/
+/apktool-output/
