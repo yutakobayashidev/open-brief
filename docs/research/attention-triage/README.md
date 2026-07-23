@@ -2,11 +2,11 @@
 
 ## まず読む
 
-ClawBrifの目標は、好奇心を抑えることではありません。
+OpenBriefの目標は、好奇心を抑えることではありません。
 
 > 知りたいことを有限の探索へ変え、探索前に持っていた意図へ戻れるようにする。
 
-ユーザーはニュースから着想を得たい一方、無限スクロールへ入ると、返信、締切、中断中の作業が見えなくなることがあります。ClawBrifは情報を禁止せず、探索の境界、好奇心の退避先、元の作業へ戻る手掛かりを提供します。
+ユーザーはニュースから着想を得たい一方、無限スクロールへ入ると、返信、締切、中断中の作業が見えなくなることがあります。OpenBriefは情報を禁止せず、探索の境界、好奇心の退避先、元の作業へ戻る手掛かりを提供します。
 
 ## 60秒で分かる構想
 
@@ -38,20 +38,20 @@ Return: 探索前の作業と次の一手を再提示
 | [02 Product model](02-product-model-and-hypotheses.md) | 製品仮説、設計原則、反証条件を確認する |
 | [03 Golden case](03-golden-case.md) | Gmail＋RSSを使う理想的な1セッションを共有する |
 | [04 Study protocol](04-study-protocol.md) | N-of-1と小規模比較研究を実施する |
-| [05 Tiimo comparison](05-tiimo-comparison.md) | 静的解析したTiimoとClawBrifの共通点・相違点を確認する |
+| [05 Tiimo comparison](05-tiimo-comparison.md) | 静的解析したTiimoとOpenBriefの共通点・相違点を確認する |
 | [06 Objective assessment](06-objective-assessment.md) | 構想の強み、kill risk、継続・停止条件を確認する |
 | [GC-01 fixture](../../../fixtures/golden-cases/gc-01-gmail-rss-return.json) | ゴールデンケースを実装・テスト用の入力と期待状態として使う |
 
 ## 根拠の読み方
 
-本文では、研究の質とClawBrifへの適用距離を混同しないため、主張を次のtierへ分けます。
+本文では、研究の質とOpenBriefへの適用距離を混同しないため、主張を次のtierへ分けます。
 
 | 表記 | 意味 |
 |---|---|
-| E1 | ClawBrif自体を対象にした実証結果。現時点では存在しない |
+| E1 | OpenBrief自体を対象にした実証結果。現時点では存在しない |
 | E2 | 近接する認知機構やUIを扱った実験・field study |
 | E3 | 観察、自己報告、質的研究、review、間接的な知見 |
-| H | ClawBrif固有の未検証仮説 |
+| H | OpenBrief固有の未検証仮説 |
 | R | プライバシー、自律性、安全性から置く規範的要件 |
 
 「ADHDなら必ずこうなる」「無限スクロールはドーパミン依存を起こす」「hyperfocusはADHDの中核症状」とは断定しません。診断の有無ではなく、探索中に以前の意図が見えなくなる行動パターンを対象にします。

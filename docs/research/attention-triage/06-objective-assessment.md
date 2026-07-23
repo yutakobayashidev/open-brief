@@ -1,10 +1,10 @@
-# 06. ClawBrif構想の客観評価
+# 06. OpenBrief構想の客観評価
 
 ## 結論
 
 **研究用prototypeは続行する。独立SaaSへの本格投資は保留する。**
 
-2026-07-21時点のClawBrifには、検証する価値のある研究仮説があります。一方、製品市場適合、重大メールの見落としを防ぐ安全性、継続利用、事業上の防御力は実証されていません。
+2026-07-21時点のOpenBriefには、検証する価値のある研究仮説があります。一方、製品市場適合、重大メールの見落としを防ぐ安全性、継続利用、事業上の防御力は実証されていません。
 
 ```text
 現在の判断
@@ -15,7 +15,7 @@ local-first OSS   条件付きGo
 大規模事業化       No-Goに近い
 ```
 
-総合点をあえて1つにすると、現時点では **5.5 / 10前後** です。この点数は「弱いアイデア」という意味ではありません。問題は重要で、仮説も明確ですが、効果と事業性を示すClawBrif固有の証拠がまだない、という意味です。
+総合点をあえて1つにすると、現時点では **5.5 / 10前後** です。この点数は「弱いアイデア」という意味ではありません。問題は重要で、仮説も明確ですが、効果と事業性を示すOpenBrief固有の証拠がまだない、という意味です。
 
 次に作るべきものは統合基盤ではなく、3週間で中核仮説を壊せる比較実験です。
 
@@ -25,7 +25,7 @@ local-first OSS   条件付きGo
 
 - 評価日: 2026-07-21
 - 対象: 現在の研究文書、GC-01 fixture、Tiimo静的解析との比較
-- E1: ClawBrif自体の実証結果はまだ存在しない
+- E1: OpenBrief自体の実証結果はまだ存在しない
 - 第二モデルレビュー: Oracle経由のGPT-5.6 Sol、Extra High reasoning
 - 外部確認: 一次研究、公式製品ページ、Google公式要件
 
@@ -35,7 +35,7 @@ local-first OSS   条件付きGo
 
 ## 何を作ろうとしているか
 
-ClawBrifの価値は、複数sourceの収集やAI要約そのものではありません。仮説の中心は、注意の遷移を次の順番で支援することです。
+OpenBriefの価値は、複数sourceの収集やAI要約そのものではありません。仮説の中心は、注意の遷移を次の順番で支援することです。
 
 ```text
 義務を見失わない
@@ -63,7 +63,7 @@ ClawBrifの価値は、複数sourceの収集やAI要約そのものではあり�
 - 明示的な終端やstop cueは、無限feedより利用終了を助け得る
 - 中断前のresumption cueは、作業再開を助け得る
 
-ただし、それらを統合したClawBrifの効果は未検証です。したがって、現段階で主張できるのは「効果がある」ではなく「安価に反証でき、検証する意味がある」です。
+ただし、それらを統合したOpenBriefの効果は未検証です。したがって、現段階で主張できるのは「効果がある」ではなく「安価に反証でき、検証する意味がある」です。
 
 ## スコアカード
 
@@ -96,7 +96,7 @@ ClawBrifの価値は、複数sourceの収集やAI要約そのものではあり�
 
 最も強い続行理由は、**重要で、統合に意味があり、しかも安価に反証できる仮説**だからです。
 
-普通の情報整理toolは「より多く集め、より効率よく読む」方向へ進みます。ClawBrifは、情報接触の前後まで扱います。
+普通の情報整理toolは「より多く集め、より効率よく読む」方向へ進みます。OpenBriefは、情報接触の前後まで扱います。
 
 1. 探索前に守りたい意図を外在化する
 2. 探索範囲に終端を作る
@@ -104,13 +104,13 @@ ClawBrifの価値は、複数sourceの収集やAI要約そのものではあり�
 4. 元のcontextへ戻る手掛かりを出す
 5. 実際に戻れたかを測る
 
-特に`Curiosity Capture`と`Return Anchor`の組み合わせは、単なるdigestとの差を作れる可能性があります。これが実測で効けば、研究上も製品上もClawBrifの中心になります。
+特に`Curiosity Capture`と`Return Anchor`の組み合わせは、単なるdigestとの差を作れる可能性があります。これが実測で効けば、研究上も製品上もOpenBriefの中心になります。
 
 ## 最も強いStop argument
 
 最も強い中止理由は、**価値を出すには情報を隠す必要がある一方、安全であるには重要な義務を隠してはならない**という緊張です。
 
-ClawBrifは接触情報量を減らすほど便利になります。しかし、返信期限、請求、セキュリティ警告などを一度でも誤って隠すと、ユーザーは元のInboxを二重確認します。その時点で注意負荷が減らず、ClawBrifが新しいInboxとして増えます。
+OpenBriefは接触情報量を減らすほど便利になります。しかし、返信期限、請求、セキュリティ警告などを一度でも誤って隠すと、ユーザーは元のInboxを二重確認します。その時点で注意負荷が減らず、OpenBriefが新しいInboxとして増えます。
 
 ```text
 絞り込みを弱める
@@ -136,7 +136,7 @@ ClawBrifは接触情報量を減らすほど便利になります。しかし、
 
 公式ページ上では、近接製品が既に次を提供しています。
 
-| 製品 | 近接機能 | ClawBrifへの含意 |
+| 製品 | 近接機能 | OpenBriefへの含意 |
 |---|---|---|
 | Google Gemini Daily Brief | Gmail、Calendar、Gemini chatsの優先表示、返信や予定化の提案 | Gmail起点のdaily priorityだけでは差別化できない |
 | DailyStack | Gmail、Outlook、Calendar、GitHub、Linear、Jira、Todoistなどのdigest | 多source統合そのものは既存category |
@@ -144,7 +144,7 @@ ClawBrifは接触情報量を減らすほど便利になります。しかし、
 | Shortwave | AIによるmail整理、重要mail、Todo、bundle、配信schedule | Gmail triageは成熟した競争領域 |
 | one sec | app前のfriction、意図確認、制限、blocking | 強制せず注意遷移を支えるUXも近接領域がある |
 
-したがって、ClawBrifが検証すべき差は次の3点です。
+したがって、OpenBriefが検証すべき差は次の3点です。
 
 1. Curiosity CaptureをTodoへ変換しないこと
 2. 探索前の作業contextを保存し、後で再提示すること
@@ -161,7 +161,7 @@ ClawBrifは接触情報量を減らすほど便利になります。しかし、
 
 将来、次のいずれかが実証されれば防御力になり得ます。
 
-- ClawBrif固有protocolによる実測済みのReturn改善
+- OpenBrief固有protocolによる実測済みのReturn改善
 - 個人ごとに、どの介入が効くかを学習するpolicy
 - agentやCLIから安全に書き込めるadapter ecosystem
 - local-first、read-only、根拠表示による信頼
@@ -178,7 +178,7 @@ ClawBrifは接触情報量を減らすほど便利になります。しかし、
 - 早期signal: 元Inboxの二重確認、保護漏れ、critical mailの見落とし
 - 対応: 初期実験ではshadow modeにし、AIにmailを非表示にさせない
 
-### 2. ClawBrif自体が新しいInboxや儀式になる
+### 2. OpenBrief自体が新しいInboxや儀式になる
 
 - 発生確率: 高
 - 重大度: 高
@@ -215,7 +215,7 @@ ClawBrifは接触情報量を減らすほど便利になります。しかし、
 - 現在のfull paper readiness: 3 / 10
 - 再設計とfield study後の可能性: 7 / 10
 
-現在のN-of-1は、instrumentationと本人の行動patternを確認するpilotとして有用です。しかし、ClawBrifの有効性、ADHDへの効果、一般的な製品市場適合の証拠にはなりません。
+現在のN-of-1は、instrumentationと本人の行動patternを確認するpilotとして有用です。しかし、OpenBriefの有効性、ADHDへの効果、一般的な製品市場適合の証拠にはなりません。
 
 ### 直すべき交絡
 
@@ -365,7 +365,7 @@ Curiosity Captureの有無は最初の比較で変えません。presentationと
 
 次は科学的に確立された閾値ではなく、過剰投資を防ぐための事前判断基準です。
 
-以下を満たす場合、ClawBrif MVPへ進みます。
+以下を満たす場合、OpenBrief MVPへ進みます。
 
 - Return率が15 percentage point以上改善する、またはmedian latencyが25%以上短くなる
 - topic化により探索超過が20%以上減る
@@ -391,7 +391,7 @@ Curiosity Captureの有無は最初の比較で変えません。presentationと
 
 | 実験結果 | 判断 |
 |---|---|
-| topic化とReturnの両方が効く | ClawBrif MVPへ進む |
+| topic化とReturnの両方が効く | OpenBrief MVPへ進む |
 | Returnだけが効く | aggregatorを作らずbrowser / IDE Return extensionへ縮小する |
 | finite batchだけが効く | 既存RSS・mail client設定で十分。独自aggregatorを止める |
 | Curiosity Captureが負担になる | coreから外す |
@@ -400,7 +400,7 @@ Curiosity Captureの有無は最初の比較で変えません。presentationと
 
 ## 最終recommendation
 
-ClawBrifは、現段階では「作るべき完成製品」ではなく、**試すべき注意遷移protocol**です。
+OpenBriefは、現段階では「作るべき完成製品」ではなく、**試すべき注意遷移protocol**です。
 
 実装順は次の1本に絞ります。
 

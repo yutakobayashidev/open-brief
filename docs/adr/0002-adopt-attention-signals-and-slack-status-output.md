@@ -6,7 +6,7 @@ Accepted — 2026-07-21
 
 ## Decision
 
-ClawBrifの注意遷移へ`Signal`段階を追加し、Slack custom statusを最初のOutput Adapterとして採用します。
+OpenBriefの注意遷移へ`Signal`段階を追加し、Slack custom statusを最初のOutput Adapterとして採用します。
 
 Signalは、集中や探索に入る本人の状態を推測して自動公開する機能ではありません。本人が開始または延長を選んだとき、公開内容と終了時刻を確認できる形で、周囲へ応答状態を伝える機能です。
 
@@ -18,13 +18,13 @@ Observe → Protect → Signal → Explore / Focus → Return
 
 - 集中や探索へ入ると、本人だけでなく会話相手にも応答不能の影響が生じる
 - 「無視している」のか「いつ戻る」のかが分からない状態を減らしたい
-- ClawBrifを情報のInputだけで完結させず、本人が選んだ注意状態を社会的contextへOutputしたい
+- OpenBriefを情報のInputだけで完結させず、本人が選んだ注意状態を社会的contextへOutputしたい
 - 自動返信より小さく、可逆で、誤動作時の損失が限定された出力から始めたい
 - 作業内容や診断情報を公開せず、必要最小限のavailabilityだけを伝えたい
 
 ## Context
 
-これまでのClawBrifは、GmailやRSSを収集し、本人のためにProtect、Explore、Capture、Returnを支援するInput中心の構想でした。
+これまでのOpenBriefは、GmailやRSSを収集し、本人のためにProtect、Explore、Capture、Returnを支援するInput中心の構想でした。
 
 しかし、集中や探索中にSlackの会話から離脱すると、次の問題は本人の画面内だけでは解決しません。
 
@@ -47,7 +47,7 @@ Signalは、本人の集中を周囲へ説明し、復帰予定を共有する�
 - 初期利用者は、集中中の状態と復帰予定をSlackへ共有する価値を感じる
 - genericなstatusでも、無言の離脱より会話相手の予測可能性が上がる
 - 毎回別dialogを出さず、Focus開始画面内のpreviewと開始操作で十分な同意を得られる
-- status更新に失敗しても、ClawBrif内のFocusやReturnは継続できる
+- status更新に失敗しても、OpenBrief内のFocusやReturnは継続できる
 
 ## Signal Model
 
@@ -123,7 +123,7 @@ Focusを延長した場合だけ、新しいexpirationをpreviewして更新し�
 
 ### Return
 
-終了時はSlack側のexpirationをcleanupの第一手段にします。ClawBrifが稼働している場合は現在statusを読み、ClawBrifが適用した値と一致するときだけclearまたは以前のstatus復元を試みます。
+終了時はSlack側のexpirationをcleanupの第一手段にします。OpenBriefが稼働している場合は現在statusを読み、OpenBriefが適用した値と一致するときだけclearまたは以前のstatus復元を試みます。
 
 Slack上で本人がstatusを変更していた場合、その値を上書きしません。
 
@@ -141,7 +141,7 @@ Slack上で本人がstatusを変更していた場合、その値を上書きし
 
 ## Ownership and Reconciliation
 
-ClawBrifがSlack上の手動操作と競合しないため、次の順序を使います。
+OpenBriefがSlack上の手動操作と競合しないため、次の順序を使います。
 
 1. 書き込み前に現在のstatusを取得する
 2. 置き換える内容とexpirationを本人へ表示する
@@ -198,7 +198,7 @@ Slack Input Adapterは、Gmail＋RSSの中核仮説を検証した後に扱い�
 
 ## Options Considered
 
-### A. ClawBrif内だけにFocus状態を表示する
+### A. OpenBrief内だけにFocus状態を表示する
 
 採用しません。本人の注意は支援できますが、会話相手から見た無言の離脱は変わりません。
 
@@ -218,7 +218,7 @@ Slack Input Adapterは、Gmail＋RSSの中核仮説を検証した後に扱い�
 
 ### Positive
 
-- ClawBrifがInput整理だけでなく、社会的な注意調整を扱える
+- OpenBriefがInput整理だけでなく、社会的な注意調整を扱える
 - 無言の離脱を、復帰予定のある状態へ変換できる
 - 自動返信より通知負荷と誤送信riskが小さい
 - Slack固有実装をOutput Adapterとして交換可能にできる

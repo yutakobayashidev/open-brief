@@ -6,7 +6,7 @@ Accepted — 2026-07-21
 
 ## Decision
 
-ClawBrifをlocal-firstなAttention Control Planeとして実装し、raw source dataは端末内へ保持します。AI処理はModel Gatewayを介し、ユーザーがrules-only、local model、remote providerを明示的に選択できるようにします。
+OpenBriefをlocal-firstなAttention Control Planeとして実装し、raw source dataは端末内へ保持します。AI処理はModel Gatewayを介し、ユーザーがrules-only、local model、remote providerを明示的に選択できるようにします。
 
 remote providerへの暗黙の送信と、自動cloud fallbackは禁止します。
 
@@ -15,13 +15,13 @@ remote providerへの暗黙の送信と、自動cloud fallbackは禁止します
 - Gmail、RSS、Slack、GitHubなどを統合すると、個別service以上に詳細な行動profileが生まれる
 - ユーザーが保存場所、送信先、model、削除時期を制御できる必要がある
 - OpenClaw、Hermes Agent、CLIなど既存の収集手段を再利用したい
-- ClawBrifが全sourceのcredentialとadapterを所有する構成を避けたい
+- OpenBriefが全sourceのcredentialとadapterを所有する構成を避けたい
 - 特定model providerのSDK、料金、利用規約、可用性へ中核domainを結合したくない
 - 研究prototypeから始めるため、production SaaS基盤を先行実装したくない
 
 ## Context
 
-ClawBrifは、複数sourceから得たObservationを、`Protect → Signal → Explore / Focus → Capture → Return`という注意遷移へ変換します。Signalの外部書き込み境界は[ADR 0002](0002-adopt-attention-signals-and-slack-status-output.md)で定義します。
+OpenBriefは、複数sourceから得たObservationを、`Protect → Signal → Explore / Focus → Capture → Return`という注意遷移へ変換します。Signalの外部書き込み境界は[ADR 0002](0002-adopt-attention-signals-and-slack-status-output.md)で定義します。
 
 単一sourceの要約と異なり、複数sourceを統合したstoreからは次の情報を推測できます。
 
@@ -31,7 +31,7 @@ ClawBrifは、複数sourceから得たObservationを、`Protect → Signal → E
 - いつ作業し、どこで中断したか
 - 何を重要または不要と判断したか
 
-この集約dataを必ずproject運営者のserverへ送る構成は、ClawBrifが解こうとしている注意問題とは別に、大きなprivacy riskと運用責任を生みます。
+この集約dataを必ずproject運営者のserverへ送る構成は、OpenBriefが解こうとしている注意問題とは別に、大きなprivacy riskと運用責任を生みます。
 
 一方、local modelだけを必須にすると、端末性能、model品質、context長、structured outputの差により利用者を限定します。そのためlocal処理を既定にしつつ、本人がremote providerを選択できる境界が必要です。
 
@@ -40,7 +40,7 @@ ClawBrifは、複数sourceから得たObservationを、`Protect → Signal → E
 - 現時点では研究文書とfixtureがcontractであり、移行対象となるproduction実装はない
 - 最初のsource候補は義務系のGmailと好奇心系のRSSである
 - source収集には常駐agentまたはCLIを利用する構想がある
-- ClawBrif固有の効果を示すE1実証結果はまだない
+- OpenBrief固有の効果を示すE1実証結果はまだない
 
 ### Assumptions
 
@@ -80,17 +80,17 @@ BYOMはBring Your Own Modelを意味します。remote利用時は、API key、p
 |---|---|---|
 | source credential | 収集agentまたはOS secret store | local |
 | raw email、feed item、message | source serviceとLocal Observation Store | local |
-| normalized Observation | ClawBrif | local |
-| ProtectedIntent、CuriosityCapture、ReturnAnchor | ClawBrif | local |
+| normalized Observation | OpenBrief | local |
+| ProtectedIntent、CuriosityCapture、ReturnAnchor | OpenBrief | local |
 | provider API key | ユーザーとOS secret store | local |
 | remote request payload | ユーザーが選択したprovider | explicit opt-in時だけ送信 |
-| application log | ClawBrif | local、content非保持が既定 |
+| application log | OpenBrief | local、content非保持が既定 |
 
-ClawBrifの運営serverをraw dataの必須中継点にしません。
+OpenBriefの運営serverをraw dataの必須中継点にしません。
 
 ### Ingress contract
 
-収集agentはsource固有dataを、version付きのObservation schemaへ正規化して書き込みます。ClawBrifのdomain処理は、GmailやSlack固有のSDKを直接呼びません。
+収集agentはsource固有dataを、version付きのObservation schemaへ正規化して書き込みます。OpenBriefのdomain処理は、GmailやSlack固有のSDKを直接呼びません。
 
 最初の実装transportは別途決定します。file、stdin、localhost APIのいずれを選んでも、同じschemaとprovenance要件を使います。
 

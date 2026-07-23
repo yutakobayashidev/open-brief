@@ -51,19 +51,19 @@ nix shell nixpkgs#unzip -c unzip -p \
   base.apk assets/index.android.bundle \
   > /tmp/tiimo-index.android.bundle
 
-PYTHONPATH=/tmp/clawbrif-hermes-dec/src \
+PYTHONPATH=/tmp/openbrief-hermes-dec/src \
 python3 -m hermes_dec.parsers.hbc_file_parser \
   /tmp/tiimo-index.android.bundle
 
-PYTHONPATH=/tmp/clawbrif-hermes-dec/src \
+PYTHONPATH=/tmp/openbrief-hermes-dec/src \
 python3 -m hermes_dec.disassembly.hbc_disassembler \
   /tmp/tiimo-index.android.bundle /tmp/tiimo-disassembly.hasm
 
-PYTHONPATH=/tmp/clawbrif-hermes-dec/src \
+PYTHONPATH=/tmp/openbrief-hermes-dec/src \
 python3 -m hermes_dec.decompilation.hbc_decompiler \
   /tmp/tiimo-index.android.bundle /tmp/tiimo-decompiled.js
 
-PYTHONPATH=/tmp/clawbrif-hbctool \
+PYTHONPATH=/tmp/openbrief-hbctool \
 python3 -c 'import hbctool; hbctool.main()' \
   disasm /tmp/tiimo-index.android.bundle /tmp/tiimo-hbctool
 ```

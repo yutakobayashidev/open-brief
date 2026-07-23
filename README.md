@@ -1,4 +1,4 @@
-# ClawBrif
+# OpenBrief
 
 Androidアプリの静的解析と認知科学・HCI研究を、独立したAttention Triageアプリの設計へ変換するための調査リポジトリです。
 
@@ -17,7 +17,7 @@ Androidアプリの静的解析と認知科学・HCI研究を、独立したAtte
 
 - [研究概要と目次](docs/research/attention-triage/README.md)
 - [Gmail＋RSSゴールデンケース](docs/research/attention-triage/03-golden-case.md)
-- [TiimoとClawBrifの比較](docs/research/attention-triage/05-tiimo-comparison.md)
+- [TiimoとOpenBriefの比較](docs/research/attention-triage/05-tiimo-comparison.md)
 - [構想の客観評価](docs/research/attention-triage/06-objective-assessment.md)
 - [GC-01実装fixture](fixtures/golden-cases/gc-01-gmail-rss-return.json)
 - [評価プロトコル](docs/research/attention-triage/04-study-protocol.md)

@@ -41,7 +41,7 @@
 - トピックcluster: 4件
 - 最終同期: 12:25
 
-最上位トピックは、常駐Agentの新しいmemory設計に関する3記事です。ユーザーのClawBrif構想と関係します。
+最上位トピックは、常駐Agentの新しいmemory設計に関する3記事です。ユーザーのOpenBrief構想と関係します。
 
 ## End-to-end flow
 

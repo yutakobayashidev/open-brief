@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-このディレクトリには、ClawBrifの実装を長期的に拘束する技術判断を記録します。
+このディレクトリには、OpenBriefの実装を長期的に拘束する技術判断を記録します。
 
 ## 運用
 

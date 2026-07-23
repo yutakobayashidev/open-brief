@@ -3,7 +3,7 @@
   "id": "gc-01-gmail-rss-return",
   "title": "Gmailの返信を保護し、有限RSS探索後に元作業へ戻る",
   "scope": "normalized_observation_to_attention_triage",
-  "description": "常駐Agentが正規化したObservationを入力し、ClawBrifの分類、有限化、Curiosity Capture、Returnを検証する。UI文言やLLM生成文の完全一致は検証しない。",
+  "description": "常駐Agentが正規化したObservationを入力し、OpenBriefの分類、有限化、Curiosity Capture、Returnを検証する。UI文言やLLM生成文の完全一致は検証しない。",
   "clock": {
     "startedAt": "2026-07-21T12:30:00+09:00",
     "timeZone": "Asia/Tokyo"
