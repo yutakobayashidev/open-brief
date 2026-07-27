@@ -19,6 +19,7 @@ Androidアプリの静的解析と認知科学・HCI研究を、独立したAtte
 - [Gmail＋RSSゴールデンケース](docs/research/attention-triage/03-golden-case.md)
 - [TiimoとOpenBriefの比較](docs/research/attention-triage/05-tiimo-comparison.md)
 - [構想の客観評価](docs/research/attention-triage/06-objective-assessment.md)
+- [ADHD向けContext ResumptionとOracleレビュー](docs/research/attention-triage/07-adhd-context-resumption-oracle-review.md)
 - [GC-01実装fixture](fixtures/golden-cases/gc-01-gmail-rss-return.json)
 - [評価プロトコル](docs/research/attention-triage/04-study-protocol.md)
 

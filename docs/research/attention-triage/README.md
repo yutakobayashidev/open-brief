@@ -40,6 +40,7 @@ Return: 探索前の作業と次の一手を再提示
 | [04 Study protocol](04-study-protocol.md) | N-of-1と小規模比較研究を実施する |
 | [05 Tiimo comparison](05-tiimo-comparison.md) | 静的解析したTiimoとOpenBriefの共通点・相違点を確認する |
 | [06 Objective assessment](06-objective-assessment.md) | 構想の強み、kill risk、継続・停止条件を確認する |
+| [07 ADHD Context Resumption](07-adhd-context-resumption-oracle-review.md) | 受動context取得、Resume Pack、Screenpipe依存の是非を確認する |
 | [GC-01 fixture](../../../fixtures/golden-cases/gc-01-gmail-rss-return.json) | ゴールデンケースを実装・テスト用の入力と期待状態として使う |
 
 ## 根拠の読み方
