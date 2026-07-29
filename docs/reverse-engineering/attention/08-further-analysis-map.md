@@ -138,6 +138,8 @@ Activity Recallの`search`で、同じterminal/browser stateを大量に返さ�
 
 ## P1-1. Hotkey、overlay、selection
 
+> 解析済み。結果は[16 Invocation、selection、overlay](16-invocation-selection-and-overlay.md)を参照。
+
 ### Binary evidence
 
 - `HotKeyCenter`
@@ -165,6 +167,8 @@ goal入力を要求しない方針と相性がよい。CLI MVPでは必須でな
 
 ## P1-2. App lifecycleとfailure recovery
 
+> 解析済み。結果は[15 Startup、single-instance、crash recovery](15-startup-and-recovery.md)を参照。
+
 ### Binary evidence
 
 - `CoastSingleInstanceGuard`
@@ -188,6 +192,8 @@ goal入力を要求しない方針と相性がよい。CLI MVPでは必須でな
 CLI-onlyでも`record` daemonを持つなら、happy pathより先に必要になる。特に「起動したがcaptureできていない」silent failureを避け、理由付きgapへ変換する設計へ使える。
 
 ## P1-3. Rewind migrationとvideo salvage
+
+> 解析済み。結果は[17 Rewind import、migration、video salvage](17-rewind-import-and-salvage.md)を参照。
 
 ### Binary evidence
 
@@ -217,6 +223,8 @@ Screenpipeや他のlifelogからimportする場合のclean-room importer設計�
 
 ## P1-4. Evidenceとartifact recovery
 
+> 解析済み。結果は[14 Evidence、代表frame、artifact recovery](14-evidence-and-artifact-recovery.md)を参照。
+
 ### Binary evidence
 
 - `MemoryCardView`
@@ -241,6 +249,8 @@ presentation PDF、消えたform draft、過去のerror復元はActivity Recall 
 
 ## P2. Product delivery系
 
+> telemetry、airgap、update、onboardingの主要境界は解析済み。[18 Telemetry、airgap、update、onboarding](18-delivery-telemetry-and-onboarding.md)を参照。
+
 ### Onboardingとguided tour
 
 permission、browse、search、timeline、Agent skill installationまでを段階的に体験させるstate machineを解析できる。価値はactivation設計だが、CLI MVPのcore correctnessより後でよい。
@@ -264,12 +274,24 @@ editionごとのsettings catalog、feature surface、Sparkle update channel、bl
 - third-party assetの抽出
 - exact Coast互換CLI / RPCの実装
 
-## 推奨する次の三本
+## 追加解析の進捗
 
-実際に追加でGhidra解析するなら、次の順がOpenBriefへの情報利得が大きい。
+当初のP0 / P1項目は独立章へ整理した。さらに次を追加解析した。
 
-1. **Browser privacy path**: URL unreadable、private browsing、domain exclusionの評価順
-2. **Usage time path**: inactive / gap / pauseを時間集計へどう反映するか
-3. **Off-device path**: airgap、model送信とは別のsync/upload consent、local deleteの境界
+- [Retention、delete、除外の完全性](19-retention-delete-integrity.md)
+- [Capture trigger state machine](20-capture-trigger-state-machine.md)
+- [Privacy transition race](21-privacy-transition-races.md)
+- [Agent skillとapp bundle監査](22-agent-skill-and-bundle-audit.md)
+- [Production databaseの暗号化境界](23-production-database-encryption.md)
+- [Bundled Coast CLIのclient contract](24-coast-cli-client-contract.md)
+- [Manual captureとhistory readのprivacy境界](25-manual-capture-privacy-boundary.md)
 
-Search rankingは魅力的だが、OpenBriefのrecordが十分に蓄積される前に最適化しても検証できない。Evidence recoveryはsummary-only Activity RecallがGoになった後の独立laneとして扱う。
+残る高価値項目の多くは静的解析よりmacOS runtime観測が必要である。
+
+1. production DB header、WAL / SHMの平文内容、DB / media / socket permission
+2. pause・除外・private browsing中のmanual captureとknown frame ID read
+3. sleep / wake、permission revoke、multi-monitor hotplug
+4. delete-after-uploadのACKとrestart resume
+5. telemetry、update、favicon、backendのactual network traffic
+
+Search rankingの追加最適化とUI復元は、OpenBrief MVPの情報利得が低いため優先しない。

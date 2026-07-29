@@ -147,6 +147,8 @@ FocusSegment + ActivityObservation
                   └─ openbrief around <time>
 ```
 
+periodic tick、将来のmanual capture、Agent requestはcapture backendを直接呼ばない。全てを`CaptureIntent`へ正規化し、同じ`PolicyGate`でreservation時とresponse / commit直前に検証する。capabilityは現在画面を読む`live_screen_read`と、保存済みevidenceを読む`history_read`に分ける。MVPは`live_screen_read`のperiodic originだけを公開し、他originも同じdeny結果になるcontract testだけを持つ。
+
 ### Window metadata
 
 niri eventを受けたclientが次を決定する。
@@ -236,7 +238,7 @@ openbrief watch
 - `delete`: 対象日のevent、Observation、ActivitySliceを連鎖削除する。
 - `watch`: collectorをforegroundで実行する。systemd unitも同じcommandを使う。
 
-`-h / --help`、`--no-color`、`-v / --verbose`は全command、`--version`はrootで受ける。primary dataはstdout、diagnosticとprogressはstderrへ出す。`today`、`around`、`status`だけstableな`--json`を持つ。
+`-h / --help`、`--no-color`、`-v / --verbose`は全command、`--version`はrootで受ける。primary dataはstdout、diagnosticとprogressはstderrへ出す。`today`、`around`、`status`だけstableな`--json`を持ち、successとerrorの両方に`schema_version`を付ける。machine timestampはoffset付きRFC 3339に固定し、query range、response byte数、result countへ上限を置く。
 
 `delete`はTTYで確認し、non-interactiveでは`--force --no-input`を両方要求する。Ctrl-C時は進行中frameを破棄し、短いcleanup後に終了する。
 
@@ -272,11 +274,17 @@ credential_ref = "lm-studio-x870"
 - raw frameは成功、失敗、timeout、pause、shutdownで即時破棄する。
 - retry queue、body log、thumbnail cache、crash recovery imageを作らない。
 - `delete`はderived dataを含めて対象日を削除する。
+- exclusion変更、lock、pause、delete開始時に`privacy_epoch`を進める。capture requestは開始時epochを保持し、commit直前に一致しなければimage、model response、title、summaryをまとめて破棄する。
+- periodic、manual、Agent captureは同じ`PolicyGate`を通す。manual captureを「保存しないから安全」と例外扱いしない。
+- `live_screen_read`と`history_read`を別capabilityにし、retroactive purge後はknown frame IDでも取得不能にする。
+- media期限切れとprivacy deleteを同じ`purge`操作へまとめない。
 - lock、idle、excluded、pausedの区間は内容なしのgapとして表示する。
 - browserを許可するとbrowser内のDMやsecretを区別できない。MVPはFounderの非機密作業で試し、即時pauseとapp denylistを安全境界にする。
 - sensitive content自動検出へ安全性を依存させない。
 
 OpenBriefはLM Studio内部のstorageを管理できない。synthetic secretでLM Studioのhistory、log、temporary dataをMVP開始前とversion更新後に監査し、forensic zero-retentionは主張しない。
+
+MVPのlocal storeはuser-only permissionにし、full-disk encryptionを運用前提として表示する。ただし、これをapplication-level encryptionとは呼ばない。raw evidenceをdiskへ保存する機能を追加する場合は、DB、WAL、SHM、backupを同じ暗号化境界へ入れ、keyをOS secret storeへ分離することをrelease gateにする。
 
 ## x870のLM Studio
 
@@ -329,6 +337,8 @@ cli → app
 micro-crateはprocess境界ではない。一つのCLI binaryを配布し、OpenBriefの常駐processは同じbinaryの`watch`だけにする。LM Studio以外のHTTP serviceを増やさない。TauriはGo後に`openbrief-app`を呼ぶadapterとして追加する。
 
 常駐service、bounded lane、atomic stateの参考実装とaudioの採用判断は[11 qwen-audio-agent調査](11-qwen-audio-agent-assessment.md)に置く。source codeはcopyせず、Linux systemd lifecycleとsingle process ownerのpatternだけを採用する。
+
+ScreenpipeとEntire CLIのsource-level採否は[OSS implementation references](../../implementation-references/README.md)へ固定した。Screenpipeは全体forkせず、niri source / capture adapterを独立実装する。Entireはhook event正規化、pure lifecycle、CLI UXだけを参考にし、daemonless process modelとGit checkpoint storeは採用しない。
 
 ## Golden Case
 

@@ -45,6 +45,8 @@ Return: 探索前の作業と次の一手を再提示
 | [09 Window Transition MVP](09-window-transition-mvp-reset.md) | terminal / Vim / AI coding向けの最小Attention Handoffと検証順を確認する |
 | [10 Activity Recall Timeline MVP](10-activity-recall-timeline-mvp.md) | goal入力なしでwindow時刻と5分ごとの画面から「今日いつ何をしていたか」を返すCLI MVPを確認する |
 | [11 qwen-audio-agent assessment](11-qwen-audio-agent-assessment.md) | realtime voice runtimeのarchitecture、privacy、licenseと、OpenBriefでaudioを後回しにする理由を確認する |
+| [Screenpipe source reference](../../implementation-references/01-screenpipe-source-reference.md) | 旧MIT module、現行license、niri再利用可否を確認する |
+| [Entire CLI source reference](../../implementation-references/02-entire-cli-source-reference.md) | Agent hook、state machine、CLI patternの採否を確認する |
 | [Attention / Coast static analysis](../../reverse-engineering/attention/README.md) | capture、差分OCR、Accessibility、Agent memory、media retentionの先行実装を確認する |
 | [GC-01 fixture](../../../fixtures/golden-cases/gc-01-gmail-rss-return.json) | ゴールデンケースを実装・テスト用の入力と期待状態として使う |
 | [GC-02 fixture](../../../fixtures/golden-cases/gc-02-activity-recall-timeline.json) | goalなしのmulti-window focus、5分tick、today / aroundをsynthetic dataで検証する |

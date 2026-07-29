@@ -219,3 +219,187 @@ request parseからrouter dispatchまでにtoken、API key、Bearer、handshake�
 - runtimeでのfeature flag状態
 - CLI socketと親directoryのruntime mode、別layerのpeer check、完全なRPC schema
 - Agent skillの全文とAgent側の自律query判断
+
+## Time stateとtimezone
+
+| Address | 観測 | 導けること |
+|---|---|---|
+| `0x100190178` | idle timeout setter | inactivity timeoutは設定可能 |
+| `0x1001902f8` | 5秒intervalでidle monitor開始 | polling cadence |
+| `0x100190780` | CGEventの全event typeから最終入力経過を取得 | OS-wide idle判定 |
+| `0x100eb5850` | `frame.is_inactive`追加migration | inactive frameを保持可能 |
+| `0x100be12fc` | `handleSystemDidWake:` | wake notification entry |
+| `0x10000bb78` | screen parameter change handler | captureでなくfloating window再配置 |
+| `0x10031db68` | TimezoneObservationService start | pollとnotificationの二重監視 |
+| `0x10031ec24` | timezone change notification処理 | runtime transition観測 |
+| `0x100eb56b0` | timezone table | IANA identifierと観測時刻を保存 |
+
+sleep、screen lock専用observer、timezone historyを過去frame表示へ適用するquery、capture側のdisplay topology restartは未確認。
+
+## Evidenceとartifact recovery
+
+| Address | 観測 | 導けること |
+|---|---|---|
+| `0x1012378a0` | `SegmentSample` API | 時間範囲とfilterから代表frame列を取得 |
+| `0x100eb8740` | segment単位GROUP BYとminimum count | 短いsegmentを除外 |
+| `0x100eb8790` | segment内`LIMIT 1 OFFSET ?` | segmentごとに一枚選択 |
+| `0x1008ce840` | static image優先、video fallback | media resolution順序 |
+| `0x100d6d270` | `PurgedFramePlaceholder` | cloud-only / purgedを明示 |
+| `0x100eb7630` | `window_bound` schema | 後段active-window crop |
+| `0x101237d8f` | `FocusedWindowBounds` API | window選択とfallback level |
+
+representative frameのoffset式、crop座標変換、cloud再取得条件、PDF再構成は未確認。
+
+## Startupとrecovery
+
+| Address | 観測 | 導けること |
+|---|---|---|
+| `0x10063b3e0` | single-instance guard | 既存instance activateとhandoff wait |
+| `0x100305210` | critical startup開始 | startup taskの二段階化 |
+| `0x100305c6c` | background startup開始 | core readiness後の遅延処理 |
+| `0x10017469c` | recorder start gate | permission、DB、migrationを確認 |
+| `0x10029e824` | stale reservation watchdog | process内queue recovery |
+| `0x1002da8a0` | interrupted migration cleanup | partial artifact rollback |
+| `0x1003c7d30` | video archive recovery scan | DBとfileの照合 |
+| `0x1003d9458` | archive finalize | file存在時に完了 |
+| `0x1003d97cc` | archive rollback | file不在時にactiveへ戻す |
+| `0x100013bf4` | power-off handler | async shutdown coordination |
+
+startup taskの完全DAG、wake taskのcallee、upload queueのdurable recoveryは未確認。
+
+## Invocation、selection、overlay
+
+| Address | 観測 | 導けること |
+|---|---|---|
+| `0x10001a15c` | primary / search hotkey登録 | shortcut policyの一元化 |
+| `0x10001c41c` | search handler | generation付き多重open抑止 |
+| `0x1003b2308` | modal hotkey gate | modal中のevent loss回避 |
+| `0x1000a3328` | SelectionCaptureService | AXSelectedTextをclipboard非破壊で取得 |
+| `0x100645ccc` | overlay present | 最初のoverlayでfocus stateを保存 |
+| `0x100644bf4` | overlay close | 最後のoverlayでfocusとcapture gateを復元 |
+| `0x100177a24` | focused bundle exclusion | 通常captureのself / app exclusion |
+
+global hotkey backend、矩形selection capture、focus PIDの明示reactivationは未確認。
+
+## Rewind importとsalvage
+
+| Address | 観測 | 導けること |
+|---|---|---|
+| `0x1002d3698` | source schema validation | capability確認後にimport |
+| `0x1002dd6f8` | SQLCipher plaintext export | 元DBを直接復号更新しない |
+| `0x1002ea8b8` | chunks COW clone | source media非破壊 |
+| `0x1002df500` | disk preflight | cross-volumeとheadroomを考慮 |
+| `0x100ebc790` | frame mapping SQL | ID保持とtimestamp ms正規化 |
+| `0x100ebfca0` | segment rebuild SQL | derived dataをnative semanticsで再構成 |
+| `0x1002da8a0` | interrupted cleanup | partial artifactから安全に再実行 |
+| `0x1002dc05c` | completion finalization | DBとsettingsの二重marker |
+| `0x1002fae8c` | video salvage loop | 欠損fileだけ非上書きcopy |
+
+key取得元、supported version範囲、partial batch resume、image-only frame pathは未確認。
+
+## Delivery、telemetry、onboarding
+
+| Address | 観測 | 導けること |
+|---|---|---|
+| `0x10034e18c` | daily heartbeat生成 | count / boolean中心の利用状況telemetry |
+| `0x100ec29b0` | airgap setting key | network capabilityの明示policy |
+| `0x100f02500` | `_airgapAtLaunch` | launch時snapshotを強く示唆 |
+| `0x100863880` | scheduled update policy | onboarding中のbackground check抑止 |
+| `0x10086312c` | Sparkle feed URL accessor | edition別updater |
+| `0x1009aa328` | guided tour readiness | 5 frame以上で案内開始 |
+
+content telemetry不在、Sentry production有効化、Airgapの全runtime guardは静的解析だけでは証明できない。
+
+## Retentionとdelete integrity
+
+| Address | 観測 | 導けること |
+|---|---|---|
+| `0x1003d9cc4` | per-video purge transaction | DB stateを先にpurgedへ更新 |
+| `0x1003d9dfc` | media file deletion | transaction後のbest-effort削除 |
+| `0x1003d55a4` | archive state machine | recoverableなarchiving中間state |
+| `0x1003e9aa4` | orphan cleanup | DB矛盾時は破壊処理を停止 |
+| `0x1003c9c74` | time retention breaker | failure build中は停止 |
+| `0x1003caec4` | storage-cap breaker | 同じintegrity gateを共有 |
+| `0x100ebeef0` | WAL truncate checkpoint文字列 | generic physical cleanup surface |
+
+Retention pathからframe、FTS、OCR、AX、segment削除は確認できず、`purge`はprivacy deleteではない。retroactive exclusionとsecure physical eraseも未確認。
+
+## Capture trigger
+
+| Address | 観測 | 導けること |
+|---|---|---|
+| `0x100173e94` | recorder default interval 2秒、max concurrent 3 | fixed periodic capture |
+| `0x100174c1c` | recorder start | immediate capture後にtimer |
+| `0x100175c58` | timer callback | tickごとにcapture task |
+| `0x100176b4c` | stop | generation clear、session UUID rotate、task cancel |
+| `0x100177120` | display selection | frontmost window中心からfallback |
+| `0x10018ada0` | QHD / balanced default | default media quality |
+| `0x1000981f0` | manual screen capture | timeline recorderと別path |
+
+app/window/input/AX notificationによるcapture前倒しと、負荷によるadaptive interval / resolutionは確認できない。
+
+## Privacy transition
+
+| Address | 観測 | 導けること |
+|---|---|---|
+| `0x100f347b0` | focused window exclusion | metadataとpixel filterの二層guard |
+| `0x100f34850` | focused browser unreadableでskip | fail-closed browser capture |
+| `0x1000fb7e4` | exclusion変更時のfrontmost再評価 | future AX policyを即時更新 |
+| `0x10011a0f4` | secure field sanitization path | valueとmasked lengthを除去 |
+| `0x100367ca0` | private verdict scan | direct / inferred判定とcache |
+| `0x100f3da20` | overlay recording gate close | self-captureを期間単位で停止 |
+| `0x100f354f0` | stranded overlay gate recovery | privacy gate self-heal |
+
+exclusion変更時のprivacy epoch、commit-time再検証、image上のsecure-field redactionは確認できない。
+
+## BundleとAgent skill
+
+| Evidence | 観測 |
+|---|---|
+| `Info.plist` | Coast Local Lite 1.0、build 131000、bundle `inc.attention.rem` |
+| `ClientVersion.txt` | `client-v00.00.131-lite` |
+| Mach-O header | arm64 |
+| embedded signature | team `6U2JW3D8N3` |
+| bundled skill | metadata → FTS/sample → frame/OCR → image/AXの段階的query |
+
+binary SHA-256とCLI SHA-256は[Analysis scope](../01-analysis-scope.md)に記録した。install後file modeとruntime network behaviorはLinux上の展開済みbundleからは確定できない。
+
+## Production database encryption
+
+| Address / evidence | 観測 | 導けること |
+|---|---|---|
+| `FUN_10020a590` | active pathを通常GRDB `DatabasePool`へ渡す | production open pathにkey引数なし |
+| `FUN_10020cc80` | Application Supportの`rem.db`をread-only poolで開く | debug / production切替も通常SQLite |
+| `0x100ef2920`周辺 | `DatabaseService` fieldにpool、path、directory | `encryptionKey` fieldなし |
+| `0x100eb3ad0` | `PRAGMA journal_mode = WAL` | production sidecarが作られる |
+| `0x100eb3af0` | `PRAGMA synchronous = NORMAL` | 通常GRDB tuning |
+| `0x100eb3b10` | `PRAGMA busy_timeout = 30000` | 通常SQLite concurrency設定 |
+| Rewind method群 | SQLCipher key、export、plaintext temp DB | SQLCipher利用はRewind importへ局在 |
+
+runtime DB header、WAL / SHM内容、file modeは未確認。production `rem.db`がplain SQLiteであることは複数の否定的証拠による強い推定である。
+
+## Bundled CLI client
+
+| Address / evidence | 観測 | 導けること |
+|---|---|---|
+| `0x10009dfc4` | JSON-RPC request生成とresult / error処理 | newline-delimited JSON-RPC 2.0 |
+| `0x10009e7a0` | Application Support下の`cli.sock` path | local Unix socket transport |
+| `0x10009e9f0` | AF_UNIX connectとtimeout設定 | send / receive timeoutは100秒 |
+| `0x10009f1cc` | 一回のsend、LFまでrecv | partial write loopとtotal size capなし |
+| timestamp parser | local naive date-time format群 | offset / `Z`非対応、current timezone依存 |
+| cover selection | 直近5選択frameとのTF-IDF distance | content差分と時間閾値のAND |
+
+response ID / JSON-RPC version検証、payload上限、schema negotiation、structured JSON errorは確認できない。
+
+## Manual captureとhistory read
+
+| Address / evidence | 観測 | 導けること |
+|---|---|---|
+| `FUN_1000981f0` | current screen capture | periodic recorderとは別path |
+| `FUN_10009afa4` | bundle / title / boundsによるwindow capture | background / excluded windowを指定可能 |
+| manual preflight | `CGPreflightScreenCaptureAccess` | OS permissionだけが共通gate |
+| ScreenCaptureKit filter | Attention自身のwindowを除外 | app denylistの全window除外ではない |
+| current RPC response | JPEG / base64を直接返す | timeline commitを通らない |
+| `query image` | stored frameをID / timeでPNG取得 | `history_read`はcurrent captureと別capability |
+
+pause、app / domain exclusion、private verdict、overlay gate、privacy epochをmanual captureが共有するcallは確認できない。known frame IDへのretroactive exclusionはruntime未確認。

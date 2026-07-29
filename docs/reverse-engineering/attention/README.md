@@ -35,6 +35,9 @@ OpenBriefが借りるべきなのは、画像を全保存する製品構造で�
 6. 直近frameはHEIC画像として保存し、後からFFmpegで動画へまとめて`image_path`を外す二段階storageを採る。
 7. timelineのsegment境界は少なくともapplication、domain、URLの変化から作られる。
 8. Agent連携は、local CLI bridge、Agent用skill、外部Agentへのprompt routingを分離している。
+9. productionの`rem.db`は通常GRDBで開かれ、SQLCipherの利用はRewind importへ局在するため、plain SQLiteである可能性が高い。
+10. bundled CLIはnewline-delimited JSON-RPCを使うが、ID照合、size cap、partial write対応、timezone付き時刻が不足する。
+11. manual current captureとhistory image readはperiodic recorderのpause・除外policyを共有しない。
 
 ## 文書一覧
 
@@ -52,6 +55,19 @@ OpenBriefが借りるべきなのは、画像を全保存する製品構造で�
 | [10 Usage and sessions](10-usage-and-session-semantics.md) | frame count時間とtimestamp sessionの異なる意味 |
 | [11 Sync, upload, airgap](11-sync-upload-airgap.md) | off-device pipeline、consent、DB guard、airgap |
 | [12 Search and retrieval](12-search-retrieval-pipeline.md) | FTS query grammar、streaming、多段dedup、degradation |
+| [13 Time state and inactivity](13-time-state-and-inactivity.md) | idle、sleep/wake、display、timezoneの境界 |
+| [14 Evidence and artifact recovery](14-evidence-and-artifact-recovery.md) | 代表frame、media fallback、window crop、短期Evidence |
+| [15 Startup and recovery](15-startup-and-recovery.md) | 二重起動、startup gate、crash recovery、daemon state |
+| [16 Invocation, selection, overlay](16-invocation-selection-and-overlay.md) | hotkey、AX selection、focus restoration、self-capture gate |
+| [17 Rewind import and salvage](17-rewind-import-and-salvage.md) | source非破壊import、fact mapping、rollback、media repair |
+| [18 Delivery, telemetry, onboarding](18-delivery-telemetry-and-onboarding.md) | network capability、airgap、update、progressive onboarding |
+| [19 Retention and delete integrity](19-retention-delete-integrity.md) | media purgeとprivacy deleteの差、orphan、WAL、retroactive exclusion |
+| [20 Capture trigger state machine](20-capture-trigger-state-machine.md) | 2秒timer、generation、display、manual path |
+| [21 Privacy transition races](21-privacy-transition-races.md) | secure field、private verdict、notification、commit-time epoch |
+| [22 Agent skill and bundle audit](22-agent-skill-and-bundle-audit.md) | bundled skill全文の設計要約、guardrail gap、bundle metadata |
+| [23 Production database encryption](23-production-database-encryption.md) | plain SQLiteの強い推定、SQLCipherのRewind局在、WALと鍵境界 |
+| [24 Coast CLI client contract](24-coast-cli-client-contract.md) | Unix socket、JSON-RPC、時刻、output、failure contract |
+| [25 Manual capture privacy boundary](25-manual-capture-privacy-boundary.md) | manual / history readのpolicy bypassと共通PolicyGate |
 | [Evidence](evidence/observations.md) | symbol、文字列、SQL、logから得た観測一覧 |
 
 ## 確度の表記

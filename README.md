@@ -24,6 +24,19 @@ Androidアプリの静的解析と認知科学・HCI研究を、独立したAtte
 - [Usageとsession semantics](docs/reverse-engineering/attention/10-usage-and-session-semantics.md)
 - [Sync・upload・airgap解析](docs/reverse-engineering/attention/11-sync-upload-airgap.md)
 - [Searchとretrieval pipeline](docs/reverse-engineering/attention/12-search-retrieval-pipeline.md)
+- [Time state・inactivity・timezone](docs/reverse-engineering/attention/13-time-state-and-inactivity.md)
+- [Evidence・artifact recovery](docs/reverse-engineering/attention/14-evidence-and-artifact-recovery.md)
+- [Startup・single-instance・recovery](docs/reverse-engineering/attention/15-startup-and-recovery.md)
+- [Invocation・selection・overlay](docs/reverse-engineering/attention/16-invocation-selection-and-overlay.md)
+- [Rewind import・video salvage](docs/reverse-engineering/attention/17-rewind-import-and-salvage.md)
+- [Telemetry・airgap・onboarding](docs/reverse-engineering/attention/18-delivery-telemetry-and-onboarding.md)
+- [Retention・delete完全性](docs/reverse-engineering/attention/19-retention-delete-integrity.md)
+- [Capture trigger state machine](docs/reverse-engineering/attention/20-capture-trigger-state-machine.md)
+- [Privacy transition race](docs/reverse-engineering/attention/21-privacy-transition-races.md)
+- [Agent skill・bundle監査](docs/reverse-engineering/attention/22-agent-skill-and-bundle-audit.md)
+- [Production DB暗号化境界](docs/reverse-engineering/attention/23-production-database-encryption.md)
+- [Coast CLI client contract](docs/reverse-engineering/attention/24-coast-cli-client-contract.md)
+- [Manual capture privacy境界](docs/reverse-engineering/attention/25-manual-capture-privacy-boundary.md)
 
 ## Attention Triage研究
 
@@ -40,5 +53,11 @@ Androidアプリの静的解析と認知科学・HCI研究を、独立したAtte
 - [GC-02 Activity Recall fixture](fixtures/golden-cases/gc-02-activity-recall-timeline.json)
 - [GC-03 Activity Recall fail-closed fixture](fixtures/golden-cases/gc-03-activity-recall-fail-closed.json)
 - [評価プロトコル](docs/research/attention-triage/04-study-protocol.md)
+
+## OSS implementation references
+
+- [参照方針と目次](docs/implementation-references/README.md)
+- [Screenpipe source reference](docs/implementation-references/01-screenpipe-source-reference.md)
+- [Entire CLI source reference](docs/implementation-references/02-entire-cli-source-reference.md)
 
 解析対象APKは `apks/com.tiimo.androidappreactnative/` に置かれています。APKや復元コードを配布・転載することを目的としていません。

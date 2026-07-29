@@ -13,3 +13,4 @@
 - x870上の推論backendというだけで独自HTTP API、reverse proxy、server crateを設計しない。ユーザーがLM StudioのOpenAI互換APIを使うなら、OpenBriefは標準endpointへ直接つなぐ小さなadapterだけを持ち、Tailscaleはdevice間transportとaccess controlに限定する。
 - 時間盲を支援するtoolへ、毎回のgoal入力、agent command wrapper、windowごとの許可を必須にしない。開発中のmulti-window移動と要件未定の探索を通常状態として、one-time denylistと即時pauseを備えたambient観測から「いつ何をしていたか」を自動で返し、goalとmanual markは任意の補助情報にする。
 - repository全体の構想を尋ねられた時に、直近のMVPをproject全体の目的へ縮約しない。README、ADR、research、reverse-engineering、golden case、git historyを横断し、North Star、現在のwedge、後続projection、保留・No-Goを分けて説明する。
+- 同じOSSを実装候補として繰り返し参照する場合、毎回mainを再調査しない。確認したcommit、license、重要source path、採用・非採用、再調査条件をimplementation referenceへ固定する。

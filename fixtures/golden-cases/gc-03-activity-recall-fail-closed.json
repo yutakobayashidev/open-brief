@@ -76,11 +76,63 @@
       }
     },
     {
+      "at": "2026-07-29T14:10:01+09:00",
+      "command": "capture.request",
+      "arguments": {
+        "origin": "manual",
+        "capability": "live_screen_read"
+      },
+      "expect": {
+        "requestAccepted": false,
+        "denialReason": "paused",
+        "rawImageMemoryCountAfterStep": 0
+      }
+    },
+    {
       "at": "2026-07-29T14:17:00+09:00",
       "command": "capture.auto_resume",
       "arguments": {},
       "expect": {
         "collectorStatus": "enabled"
+      }
+    },
+    {
+      "at": "2026-07-29T14:17:20+09:00",
+      "command": "capture.request_started",
+      "arguments": {
+        "requestId": "pre-exclusion-request-001",
+        "appId": "com.mitchellh.ghostty",
+        "privacyEpoch": 7
+      },
+      "expect": {
+        "requestAccepted": true
+      }
+    },
+    {
+      "at": "2026-07-29T14:17:21+09:00",
+      "command": "capture.exclusions_updated",
+      "arguments": {
+        "excludedAppIds": [
+          "signal",
+          "com.mitchellh.ghostty"
+        ]
+      },
+      "expect": {
+        "privacyEpoch": 8,
+        "inFlightCaptureCancelled": true
+      }
+    },
+    {
+      "at": "2026-07-29T14:17:25+09:00",
+      "command": "model.late_result",
+      "arguments": {
+        "requestId": "pre-exclusion-request-001",
+        "privacyEpoch": 7
+      },
+      "expect": {
+        "resultStored": false,
+        "activityObservationCountDelta": 0,
+        "storedTitleCountDelta": 0
       }
     },
     {
@@ -103,6 +155,19 @@
       "expect": {
         "captureCreated": false,
         "captureGapReason": "app_excluded"
+      }
+    },
+    {
+      "at": "2026-07-29T14:20:01+09:00",
+      "command": "capture.request",
+      "arguments": {
+        "origin": "agent",
+        "capability": "live_screen_read"
+      },
+      "expect": {
+        "requestAccepted": false,
+        "denialReason": "app_excluded",
+        "rawImageMemoryCountAfterStep": 0
       }
     },
     {
@@ -169,6 +234,7 @@
     "queuedImageCount": 0,
     "clientRawImageDiskWriteCount": 0,
     "lateResultStoredCount": 0,
+    "policyBypassCaptureCount": 0,
     "excludedContentStoredCount": 0,
     "finalDataCounts": {
       "focusSegments": 0,
