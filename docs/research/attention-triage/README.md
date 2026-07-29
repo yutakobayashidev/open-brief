@@ -42,7 +42,13 @@ Return: 探索前の作業と次の一手を再提示
 | [06 Objective assessment](06-objective-assessment.md) | 構想の強み、kill risk、継続・停止条件を確認する |
 | [07 ADHD Context Resumption](07-adhd-context-resumption-oracle-review.md) | 受動context取得、Resume Pack、Screenpipe依存の是非を確認する |
 | [08 awesome-adhd synthesis](08-awesome-adhd-cross-report-synthesis.md) | ADHD Wiki全体の共通原則、矛盾、証拠強度、OpenBriefへの含意を確認する |
+| [09 Window Transition MVP](09-window-transition-mvp-reset.md) | terminal / Vim / AI coding向けの最小Attention Handoffと検証順を確認する |
+| [10 Activity Recall Timeline MVP](10-activity-recall-timeline-mvp.md) | goal入力なしでwindow時刻と5分ごとの画面から「今日いつ何をしていたか」を返すCLI MVPを確認する |
+| [11 qwen-audio-agent assessment](11-qwen-audio-agent-assessment.md) | realtime voice runtimeのarchitecture、privacy、licenseと、OpenBriefでaudioを後回しにする理由を確認する |
+| [Attention / Coast static analysis](../../reverse-engineering/attention/README.md) | capture、差分OCR、Accessibility、Agent memory、media retentionの先行実装を確認する |
 | [GC-01 fixture](../../../fixtures/golden-cases/gc-01-gmail-rss-return.json) | ゴールデンケースを実装・テスト用の入力と期待状態として使う |
+| [GC-02 fixture](../../../fixtures/golden-cases/gc-02-activity-recall-timeline.json) | goalなしのmulti-window focus、5分tick、today / aroundをsynthetic dataで検証する |
+| [GC-03 fixture](../../../fixtures/golden-cases/gc-03-activity-recall-fail-closed.json) | x870障害、pause、excluded、lock、late result、deleteがfail closedになることを検証する |
 
 ## 根拠の読み方
 
@@ -78,3 +84,8 @@ Oracleと文献調査が一致した重要点は次です。
 - Slack status output: 最初のOutput Adapterとして、本人操作とexpiration付きで追加
 - カレンダー書き込み: ユーザーの明示確認後だけ
 - 自動返信、自動委任、強制ブロック: MVP対象外
+- terminal / Vim / AI coding向け実装は、一枚のResume Cueを中核介入にし、Window Transitionの追加価値をM0 / M1で比較する
+- Resume Cueのscreenshotは、境界keyframeの追加価値が確認された場合だけM2として試す
+- Activity Recallは別laneとして、goalやsession開始を要求せず、foreground window時刻と5分ごとの疎captureから有限な15分timelineを返す
+- Activity Recallのmodelは活動時刻や心理状態を推測せず、時刻はwindow eventから決定し、画像の追加価値をR0 / R1で比較する
+- audioはActivity Recallの観測sourceへ入れず、timelineがGoした後に任意のpush-to-talk bookmarkまたはread-only voice queryとして別評価する

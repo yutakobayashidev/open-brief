@@ -3,3 +3,13 @@
 - 「知的財産を除いてコミット」は、レポートまで除外する意味だと拡大解釈しない。まず第三者バイナリ、抽出コード、アセット、逆コンパイル・逆アセンブル生成物だけを除外し、ユーザーが作成を依頼した分析ドキュメントは保持する。
 - 構想相談で実装アーキテクチャを先行させない。ユーザーが研究結果とゴールデンケースを求めたら、根拠・仮説・反証条件と具体的な理想セッションを先に固定し、その後に実装へ落とす。
 - 開発者向け復帰支援をIDE中心と決めつけない。ユーザーがVimとAI coding agentを中心に作業する場合、復帰contextはfile/cursorより、terminalのcwd、git状態、agent session、会話上の未完了意図、再開commandを優先する。
+- terminal-firstだからといって実装技術をBun/TypeScriptへ短絡しない。ユーザーがRust/Tauriを望み、既存Rust資産も評価対象なら、UIとcoreの技術選択はその嗜好を優先し、巨大forkを避けつつcrate単位の再利用可能性を調べる。
+- Rust/Tauri志向を、最初からdesktop appを作る意味へ広げない。OpenBriefはまずCLI-onlyで開始し、細かなcapability単位のRust crateを組み合わせ、Tauriは検証後に同じapplication層へ接続するadapterとして追加する。
+- agent hooksだけでAttention Handoffの観測を十分と決めつけない。hooksはsession ID、cwd、tool、最終messageなどの意味を取れる一方、terminalに実際に見えていたerror、別pane、GUI状態を失う。常時life-logへ戻らず、対象window限定・短時間ring buffer・少数keyframe・明示送信のvisual captureを比較条件として検証する。
+- visual captureをterminal window一枚へ狭めすぎない。Attention Handoffで重要なのは、agent terminalを中心にbrowser、docs、chatなどをまたぐforeground app/windowの遷移と、その境界前後の最小keyframeである。content取得より先にtransition metadataを主signalとして設計する。
+- 観測signalを見つけた段階で、それ自体をMVPの価値へ昇格させない。Window Transitionのような受動dataは、本人へ返す最小介入と分け、無介入・手動baselineに対する増分効果を先に検証する。
+- screen captureをResume Cueの補助だけに限定しない。ユーザーがretrospective reflectionへ強い価値を感じる場合は、復帰介入と同じMVPへ混ぜず、同じ観測基盤を共有する独立したReflection Probeとして短期検証する。
+- local VLMの実現性をclient端末のGPUだけで判断しない。ユーザーがTailscale経由のx870 machineを推論backendにする場合、性能を主要riskから外し、tailnet境界、raw画像の転送・保持、backend停止時のfail-closed、要約精度を先に設計する。
+- x870上の推論backendというだけで独自HTTP API、reverse proxy、server crateを設計しない。ユーザーがLM StudioのOpenAI互換APIを使うなら、OpenBriefは標準endpointへ直接つなぐ小さなadapterだけを持ち、Tailscaleはdevice間transportとaccess controlに限定する。
+- 時間盲を支援するtoolへ、毎回のgoal入力、agent command wrapper、windowごとの許可を必須にしない。開発中のmulti-window移動と要件未定の探索を通常状態として、one-time denylistと即時pauseを備えたambient観測から「いつ何をしていたか」を自動で返し、goalとmanual markは任意の補助情報にする。
+- repository全体の構想を尋ねられた時に、直近のMVPをproject全体の目的へ縮約しない。README、ADR、research、reverse-engineering、golden case、git historyを横断し、North Star、現在のwedge、後続projection、保留・No-Goを分けて説明する。

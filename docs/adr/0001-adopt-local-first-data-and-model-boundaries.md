@@ -2,13 +2,14 @@
 
 ## Status
 
-Accepted — 2026-07-21
+- Accepted: 2026-07-21
+- Clarified for self-hosted off-device inference: 2026-07-29
 
 ## Decision
 
-OpenBriefをlocal-firstなAttention Control Planeとして実装し、raw source dataは端末内へ保持します。AI処理はModel Gatewayを介し、ユーザーがrules-only、local model、remote providerを明示的に選択できるようにします。
+OpenBriefをlocal-firstなAttention Control Planeとして実装し、raw source dataのstoreは端末内へ保持します。AI処理はModel Gatewayを介し、ユーザーがrules-only、同一端末のlocal model、本人管理のself-hosted model、remote providerを明示的に選択できるようにします。
 
-remote providerへの暗黙の送信と、自動cloud fallbackは禁止します。
+端末外への暗黙の送信と、mode間の自動fallbackは禁止します。self-hostedであっても、別machineへ送るdataはoff-device egressとして扱います。
 
 ## Decision Drivers
 
@@ -33,7 +34,7 @@ OpenBriefは、複数sourceから得たObservationを、`Protect → Signal → 
 
 この集約dataを必ずproject運営者のserverへ送る構成は、OpenBriefが解こうとしている注意問題とは別に、大きなprivacy riskと運用責任を生みます。
 
-一方、local modelだけを必須にすると、端末性能、model品質、context長、structured outputの差により利用者を限定します。そのためlocal処理を既定にしつつ、本人がremote providerを選択できる境界が必要です。
+一方、local modelだけを必須にすると、端末性能、model品質、context長、structured outputの差により利用者を限定します。そのためlocal処理を既定にしつつ、本人がself-hostedまたはremote providerを選択できる境界が必要です。
 
 ### Facts
 
@@ -47,6 +48,7 @@ OpenBriefは、複数sourceから得たObservationを、`Protect → Signal → 
 - 初期利用者はlocal agentまたはCLIを自分の端末で動かせる
 - OpenClaw、Hermes Agentなどは、共通schemaのfileまたはlocal endpointへ書き込める
 - 一部の利用者はlocal modelの品質や速度よりも、端末外へ送信しないことを優先する
+- 一部の利用者は、認証されたprivate network上の本人管理machineへだけ送信することを選ぶ
 - 一部の利用者は、明示的な同意の下でremote modelの品質を選ぶ
 
 ## Architecture Boundary
@@ -62,10 +64,10 @@ Gmail / RSS / Slack / GitHub / Git
                  ↓
      Policy / Redaction / Selection
                  ↓ bounded request
-           Model Gateway
-      ┌──────────┼──────────┐
-  rules-only  local model  remote BYOM
-      └──────────┼──────────┘
+                    Model Gateway
+      ┌──────────┬──────┴──────┬──────────┐
+  rules-only  local model  self-hosted  remote BYOM
+      └──────────┴──────┬──────┴──────────┘
                  ↓
    Brief / Decision / Return records
                  ↓
@@ -82,7 +84,8 @@ BYOMはBring Your Own Modelを意味します。remote利用時は、API key、p
 | raw email、feed item、message | source serviceとLocal Observation Store | local |
 | normalized Observation | OpenBrief | local |
 | ProtectedIntent、CuriosityCapture、ReturnAnchor | OpenBrief | local |
-| provider API key | ユーザーとOS secret store | local |
+| provider / self-hosted API token | ユーザーとOS secret store | local |
+| self-hosted request payload | ユーザー | 明示許可時だけ本人管理hostへ送信し、application-levelで非永続 |
 | remote request payload | ユーザーが選択したprovider | explicit opt-in時だけ送信 |
 | application log | OpenBrief | local、content非保持が既定 |
 
@@ -108,19 +111,23 @@ OpenBriefの運営serverをraw dataの必須中継点にしません。
 domain処理はprovider固有SDKではなく、task単位のModel Gatewayを呼びます。
 
 ```ts
-type ModelMode = 'rules_only' | 'local' | 'remote'
+type ModelMode = 'rules_only' | 'local' | 'self_hosted' | 'remote'
 
 type ModelTask =
   | 'extract_observations'
   | 'cluster_topics'
   | 'classify_obligations'
   | 'generate_brief'
+  | 'observe_frame'
+  | 'generate_session_reflection'
   | 'suggest_return_anchor'
 
 type ModelPolicy = {
   mode: ModelMode
   provider?: string
   model?: string
+  endpointRef?: string
+  credentialRef?: string
   allowRawContent: boolean
 }
 ```
@@ -132,6 +139,8 @@ type ModelPolicy = {
 - provider adapterはLocal Observation Storeを直接走査しない
 - Gatewayへ渡す前に、domain側で対象dataを選択する
 - model出力は候補として扱い、source上の行動を直接実行しない
+- `endpointRef`はuser config内の接続先を参照し、Observationまたはuntrusted project dataからURLを作らない
+- `credentialRef`はOS secret store内のtokenを参照し、secret本文をconfig、log、fixtureへ置かない
 
 ### Processing modes
 
@@ -139,23 +148,27 @@ type ModelPolicy = {
 |---|---|---|
 | `rules_only` | AI providerへ通信しない | deterministicな抽出、test、低性能端末 |
 | `local` | loopbackまたは同一端末のmodel endpointだけを使う | raw dataを端末外へ送らない通常利用 |
+| `self_hosted` | 認証されたprivate network上の本人管理endpointだけを使う | 強いmodelを自分で運用するが、raw dataの端末外送信を明示許可できるtask |
 | `remote` | 選択したproviderだけへ送信する | 本人が品質を優先して明示許可したtask |
 
 modeはtaskごとに選択可能にします。例えばtopic化はlocal、解説生成だけremoteという設定を許容します。
 
-local処理が失敗した場合はerrorを返します。remoteへ自動昇格しません。
+`self_hosted`では`endpointRef`、`remote`ではproviderを必須にします。接続先が認証を要求する場合はどちらも`credentialRef`を使い、modeに不要な接続fieldは拒否します。
 
-### Remote egress policy
+選択したmodeの処理が失敗した場合はerrorを返します。別modeまたは別providerへ自動昇格しません。
 
-remote送信には次を要求します。
+### Off-device egress policy
 
-1. providerとmodelが明示的に設定されている
-2. 対象taskでremote modeが許可されている
+self-hostedまたはremoteへの送信には次を要求します。
+
+1. mode、model、`endpointRef`またはprovider、必要な`credentialRef`が明示的に設定されている
+2. 対象taskで選択したoff-device modeが許可されている
 3. source policyが送信を許可している
 4. raw contentを送る場合は`allowRawContent`が有効である
 5. 送信先、task、対象Observation IDをcontent非保持のaudit recordへ残す
+6. transport、接続主体、送信先のaccess control、server側retentionを説明できる
 
-初期versionでは、自動redactionが完全であると主張しません。送信量を小さくし、remote利用そのものを本人が選ぶ設計を優先します。
+初期versionでは、自動redactionが完全であると主張しません。送信量を小さくし、off-device利用そのものを本人が選ぶ設計を優先します。Tailnetの暗号化とaccess controlは、client側allowlist、非永続化、非loggingの代わりにはなりません。
 
 ### Security boundaries
 
@@ -165,6 +178,8 @@ remote送信には次を要求します。
 - prompt、error、traceにはraw contentを既定で残さない
 - embeddingやvector indexもsource dataとしてlocal保持を既定にする
 - telemetryへObservation content、prompt、生成briefを含めない
+- self-hosted endpointはpublic interfaceへ直接bindせず、認証されたtransportの背後へ置く
+- off-device backend停止時にpayloadをdisk queueへ積まず、別providerへ送らない
 
 local-firstは端末侵害、悪意あるplugin、誤設定を防ぎません。localであることをprivacy保証の代わりに使わず、threat modelと権限境界を実装ごとに確認します。
 
@@ -243,13 +258,13 @@ local-firstは端末侵害、悪意あるplugin、誤設定を防ぎません。
 
 - 新しいnetwork egressには、送信data、送信先、保持期間を説明するpolicyを要求する
 - provider adapterからstore全体を直接参照させない
-- local失敗時にremoteへfallbackしないtestを置く
+- 選択modeの失敗時に別modeまたは別providerへfallbackしないtestを置く
 - offline modeで中核flowが動くintegration testを置く
 - sourceへのwrite、送信、calendar登録は別の明示確認境界を通す
 
 例外はrepository maintainerが承認します。例外には次の証拠を必要とします。
 
-- localでは実現できない理由
+- 同一端末だけでは実現できない理由
 - 送信されるdataの一覧
 - user consentとUI上の表示方法
 - retentionと削除方法
@@ -265,4 +280,4 @@ local-firstは端末侵害、悪意あるplugin、誤設定を防ぎません。
 - raw Observationと生成物の既定retentionを何日にするか
 - cross-device同期を非目標のまま維持するか、暗号化同期として別途扱うか
 
-これらは実装前に決定しますが、local-first、明示的remote opt-in、自動fallback禁止という本ADRの採用を妨げません。
+これらは実装前に決定しますが、local-first、明示的off-device opt-in、自動fallback禁止という本ADRの採用を妨げません。画面観測向けの具体的なself-hosted boundaryは[10 Activity Recall Timeline MVP](../research/attention-triage/10-activity-recall-timeline-mvp.md)で定義します。

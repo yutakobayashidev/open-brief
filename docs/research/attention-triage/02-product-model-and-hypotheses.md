@@ -36,9 +36,13 @@ OpenBriefは次の5点へ介入します。
 
 ```text
 意図の見落としリスク
-≈ 新奇性の誘引 × 情報の無境界性 × 切替回数
+≈ 新奇性の誘引 × 情報の無境界性 × 未回収な注意遷移
   ÷ 義務の可視性 × 再開手掛かり × 自己決定感
 ```
+
+`未回収な注意遷移`は、window切替回数ではなく、元の意図と再開手掛かりを残さないまま別contextへ移った状態を指します。Window Transition metadataは復帰cueの候補には使えますが、切替回数を集中、脱線、生産性のproxyにはしません。詳細は[Window Transition MVP](09-window-transition-mvp-reset.md)で検証します。
+
+時間盲に対する活動想起は、復帰cueとは別の仮説として[Activity Recall Timeline MVP](10-activity-recall-timeline-mvp.md)で検証します。goal入力を要求せず、window eventで確定した時刻と5分ごとの画面観測から「今日いつ何をしていたか」を15分単位で返します。ReflectionとReturn Anchorは、このtimeline自体の価値を確認した後の別projectionです。
 
 ## 設計原則
 

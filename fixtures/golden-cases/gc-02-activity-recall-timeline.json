@@ -1,0 +1,310 @@
+{
+  "fixtureVersion": 1,
+  "id": "gc-02-activity-recall-timeline",
+  "title": "goal入力なしでmulti-window activityを今日の時系列へ戻す",
+  "scope": "ambient_focus_to_activity_timeline",
+  "description": "niri focus eventと5分tickのsynthetic observationから、時刻を推測せず15分ActivitySliceを作る。excluded、idle、raw画像非永続化、todayとaroundを検証する。",
+  "clock": {
+    "date": "2026-07-29",
+    "timeZone": "Asia/Tokyo"
+  },
+  "given": {
+    "capturePolicy": {
+      "enabled": true,
+      "captureIntervalSeconds": 300,
+      "idleAfterSeconds": 300,
+      "minimumForegroundStableSeconds": 10,
+      "excludedAppIds": [
+        "1password",
+        "signal",
+        "discord"
+      ],
+      "rawImageDiskPersistence": false,
+      "automaticRetry": false
+    },
+    "modelPolicy": {
+      "mode": "self_hosted",
+      "provider": "lm_studio",
+      "api": "openai_chat_completions",
+      "model": "configured-vlm-id",
+      "origin": "http://<x870-tailscale-ip>:1234",
+      "requestTarget": "/v1/chat/completions",
+      "transport": "tailscale_direct_http",
+      "auth": {
+        "type": "bearer_token",
+        "credentialRef": "lm-studio-x870"
+      },
+      "imageInput": "data_url",
+      "responseFormat": "json_schema",
+      "fallbackMode": null
+    },
+    "focusEvents": [
+      {
+        "at": "2026-07-29T10:00:00+09:00",
+        "state": "observed",
+        "appId": "com.mitchellh.ghostty",
+        "windowKey": "window-terminal-openbrief"
+      },
+      {
+        "at": "2026-07-29T10:06:00+09:00",
+        "state": "observed",
+        "appId": "firefox",
+        "windowKey": "window-firefox-docs"
+      },
+      {
+        "at": "2026-07-29T10:14:00+09:00",
+        "state": "observed",
+        "appId": "obsidian",
+        "windowKey": "window-obsidian-notes"
+      },
+      {
+        "at": "2026-07-29T10:23:00+09:00",
+        "state": "excluded",
+        "sourceAppId": "signal"
+      },
+      {
+        "at": "2026-07-29T10:31:00+09:00",
+        "state": "idle"
+      },
+      {
+        "at": "2026-07-29T10:40:00+09:00",
+        "state": "observed",
+        "appId": "com.mitchellh.ghostty",
+        "windowKey": "window-terminal-openbrief"
+      },
+      {
+        "at": "2026-07-29T10:50:00+09:00",
+        "state": "disabled"
+      }
+    ],
+    "captureTicks": [
+      {
+        "at": "2026-07-29T10:05:00+09:00",
+        "result": "observed",
+        "observationId": "observation-1005"
+      },
+      {
+        "at": "2026-07-29T10:10:00+09:00",
+        "result": "observed",
+        "observationId": "observation-1010"
+      },
+      {
+        "at": "2026-07-29T10:15:00+09:00",
+        "result": "observed",
+        "observationId": "observation-1015"
+      },
+      {
+        "at": "2026-07-29T10:20:00+09:00",
+        "result": "observed",
+        "observationId": "observation-1020"
+      },
+      {
+        "at": "2026-07-29T10:25:00+09:00",
+        "result": "skipped",
+        "reason": "app_excluded"
+      },
+      {
+        "at": "2026-07-29T10:30:00+09:00",
+        "result": "skipped",
+        "reason": "app_excluded"
+      },
+      {
+        "at": "2026-07-29T10:35:00+09:00",
+        "result": "skipped",
+        "reason": "idle"
+      },
+      {
+        "at": "2026-07-29T10:40:00+09:00",
+        "result": "skipped",
+        "reason": "foreground_not_stable"
+      },
+      {
+        "at": "2026-07-29T10:45:00+09:00",
+        "result": "observed",
+        "observationId": "observation-1045"
+      }
+    ],
+    "activityObservations": [
+      {
+        "schemaVersion": 1,
+        "id": "observation-1005",
+        "capturedAt": "2026-07-29T10:05:00+09:00",
+        "appId": "com.mitchellh.ghostty",
+        "activity": "OpenBriefのLM Studio adapterを編集している",
+        "visible": [
+          "terminalにRust sourceが表示されている"
+        ],
+        "inferred": [],
+        "unknowns": [
+          "変更がcommit済みかは分からない"
+        ]
+      },
+      {
+        "schemaVersion": 1,
+        "id": "observation-1010",
+        "capturedAt": "2026-07-29T10:10:00+09:00",
+        "appId": "firefox",
+        "activity": "LM StudioのStructured Output仕様を確認している",
+        "visible": [
+          "browserにLM Studio documentationが表示されている"
+        ],
+        "inferred": [],
+        "unknowns": []
+      },
+      {
+        "schemaVersion": 1,
+        "id": "observation-1015",
+        "capturedAt": "2026-07-29T10:15:00+09:00",
+        "appId": "obsidian",
+        "activity": "capture policyの研究メモを編集している",
+        "visible": [
+          "Obsidianにcapture policyの箇条書きが表示されている"
+        ],
+        "inferred": [],
+        "unknowns": []
+      },
+      {
+        "schemaVersion": 1,
+        "id": "observation-1020",
+        "capturedAt": "2026-07-29T10:20:00+09:00",
+        "appId": "obsidian",
+        "activity": "capture policyの研究メモを編集している",
+        "visible": [
+          "Obsidianにretention tableが表示されている"
+        ],
+        "inferred": [],
+        "unknowns": []
+      },
+      {
+        "schemaVersion": 1,
+        "id": "observation-1045",
+        "capturedAt": "2026-07-29T10:45:00+09:00",
+        "appId": "com.mitchellh.ghostty",
+        "activity": "Activity Timeline fixtureを編集している",
+        "visible": [
+          "terminalにgolden case JSONが表示されている"
+        ],
+        "inferred": [],
+        "unknowns": [
+          "testが実行済みかは分からない"
+        ]
+      }
+    ]
+  },
+  "steps": [
+    {
+      "at": "2026-07-29T09:59:00+09:00",
+      "command": "collector.enable",
+      "arguments": {},
+      "expect": {
+        "goalPromptCount": 0,
+        "windowApprovalPromptCount": 0,
+        "collectorStatus": "enabled"
+      }
+    },
+    {
+      "at": "2026-07-29T10:46:00+09:00",
+      "command": "timeline.today",
+      "arguments": {
+        "date": "2026-07-29"
+      },
+      "expect": {
+        "networkRequestCountDelta": 0,
+        "activitySlices": [
+          {
+            "start": "2026-07-29T10:00:00+09:00",
+            "end": "2026-07-29T10:15:00+09:00",
+            "durations": [
+              {
+                "appId": "com.mitchellh.ghostty",
+                "seconds": 360
+              },
+              {
+                "appId": "firefox",
+                "seconds": 480
+              },
+              {
+                "appId": "obsidian",
+                "seconds": 60
+              }
+            ],
+            "activities": [
+              "OpenBriefのLM Studio adapterを編集している",
+              "LM StudioのStructured Output仕様を確認している",
+              "capture policyの研究メモを編集している"
+            ]
+          },
+          {
+            "start": "2026-07-29T10:15:00+09:00",
+            "end": "2026-07-29T10:30:00+09:00",
+            "durations": [
+              {
+                "appId": "obsidian",
+                "seconds": 480
+              },
+              {
+                "state": "excluded",
+                "seconds": 420
+              }
+            ],
+            "activities": [
+              "capture policyの研究メモを編集している"
+            ]
+          },
+          {
+            "start": "2026-07-29T10:30:00+09:00",
+            "end": "2026-07-29T10:45:00+09:00",
+            "durations": [
+              {
+                "state": "excluded",
+                "seconds": 60
+              },
+              {
+                "state": "idle",
+                "seconds": 540
+              },
+              {
+                "appId": "com.mitchellh.ghostty",
+                "seconds": 300
+              }
+            ],
+            "activities": []
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-07-29T10:47:00+09:00",
+      "command": "timeline.around",
+      "arguments": {
+        "date": "2026-07-29",
+        "time": "10:15",
+        "minutes": 15
+      },
+      "expect": {
+        "networkRequestCountDelta": 0,
+        "timelineTransitionCount": 4,
+        "observedWindowTransitionCount": 3,
+        "rawWindowTitleVisible": false,
+        "excludedAppIdVisible": false
+      }
+    }
+  ],
+  "expected": {
+    "frameObservationRequestCount": 5,
+    "skippedCaptureCount": 4,
+    "clientRawImageMemoryCountAfterEachTick": 0,
+    "clientRawImageDiskWriteCount": 0,
+    "automaticRetryCount": 0,
+    "fallbackProviderRequestCount": 0,
+    "storedGoalCount": 0,
+    "storedExcludedAppIdCount": 0,
+    "forbiddenGeneratedLabels": [
+      "focused",
+      "distracted",
+      "productive",
+      "procrastinated"
+    ],
+    "forbiddenGeneratedLabelMatchCount": 0
+  }
+}

@@ -1,0 +1,183 @@
+{
+  "fixtureVersion": 1,
+  "id": "gc-03-activity-recall-fail-closed",
+  "title": "LM Studio障害、pause、excluded、lock、deleteをfail closedに扱う",
+  "scope": "ambient_timeline_failure_and_privacy",
+  "description": "model failureでfocus timelineを止めず、画像のretryやdisk queueを作らず、private区間とlate resultを保存せず、deleteがderived dataまで消すことを検証する。",
+  "clock": {
+    "date": "2026-07-29",
+    "timeZone": "Asia/Tokyo"
+  },
+  "given": {
+    "modelPolicy": {
+      "mode": "self_hosted",
+      "provider": "lm_studio",
+      "api": "openai_chat_completions",
+      "model": "configured-vlm-id",
+      "origin": "http://<x870-tailscale-ip>:1234",
+      "requestTarget": "/v1/chat/completions",
+      "automaticRetry": false,
+      "fallbackMode": null
+    },
+    "capturePolicy": {
+      "captureIntervalSeconds": 300,
+      "excludedAppIds": [
+        "signal"
+      ],
+      "rawImageDiskPersistence": false
+    }
+  },
+  "steps": [
+    {
+      "at": "2026-07-29T14:00:00+09:00",
+      "command": "focus.changed",
+      "arguments": {
+        "state": "observed",
+        "appId": "com.mitchellh.ghostty",
+        "windowKey": "window-terminal"
+      },
+      "expect": {
+        "focusSegmentStarted": true
+      }
+    },
+    {
+      "at": "2026-07-29T14:05:00+09:00",
+      "command": "capture.tick",
+      "arguments": {
+        "lmStudioStatus": 503
+      },
+      "expect": {
+        "captureGapReason": "model_unavailable",
+        "focusSegmentPreserved": true,
+        "rawImageMemoryCountAfterStep": 0,
+        "rawImageDiskWriteCountDelta": 0,
+        "automaticRetryCountDelta": 0
+      }
+    },
+    {
+      "at": "2026-07-29T14:07:00+09:00",
+      "command": "capture.pause",
+      "arguments": {
+        "forSeconds": 600
+      },
+      "expect": {
+        "collectorStatus": "paused",
+        "inFlightCaptureCancelled": true,
+        "rawImageMemoryCountAfterStep": 0
+      }
+    },
+    {
+      "at": "2026-07-29T14:10:00+09:00",
+      "command": "capture.tick",
+      "arguments": {},
+      "expect": {
+        "captureCreated": false,
+        "captureGapReason": "paused"
+      }
+    },
+    {
+      "at": "2026-07-29T14:17:00+09:00",
+      "command": "capture.auto_resume",
+      "arguments": {},
+      "expect": {
+        "collectorStatus": "enabled"
+      }
+    },
+    {
+      "at": "2026-07-29T14:18:00+09:00",
+      "command": "focus.changed",
+      "arguments": {
+        "state": "excluded",
+        "sourceAppId": "signal"
+      },
+      "expect": {
+        "storedState": "excluded",
+        "storedAppId": null,
+        "storedWindowTitle": null
+      }
+    },
+    {
+      "at": "2026-07-29T14:20:00+09:00",
+      "command": "capture.tick",
+      "arguments": {},
+      "expect": {
+        "captureCreated": false,
+        "captureGapReason": "app_excluded"
+      }
+    },
+    {
+      "at": "2026-07-29T14:22:00+09:00",
+      "command": "screen.locked",
+      "arguments": {},
+      "expect": {
+        "storedState": "locked",
+        "inFlightCaptureCancelled": true,
+        "rawImageMemoryCountAfterStep": 0
+      }
+    },
+    {
+      "at": "2026-07-29T14:25:00+09:00",
+      "command": "capture.tick",
+      "arguments": {},
+      "expect": {
+        "captureCreated": false,
+        "captureGapReason": "locked"
+      }
+    },
+    {
+      "at": "2026-07-29T14:25:30+09:00",
+      "command": "model.late_result",
+      "arguments": {
+        "requestId": "cancelled-request-001"
+      },
+      "expect": {
+        "resultStored": false,
+        "activityObservationCountDelta": 0
+      }
+    },
+    {
+      "at": "2026-07-29T14:30:00+09:00",
+      "command": "timeline.today",
+      "arguments": {
+        "date": "2026-07-29"
+      },
+      "expect": {
+        "networkRequestCountDelta": 0,
+        "focusTimelineAvailable": true,
+        "modelFailureVisibleAsGap": true,
+        "excludedContentVisible": false
+      }
+    },
+    {
+      "at": "2026-07-29T14:31:00+09:00",
+      "command": "timeline.delete",
+      "arguments": {
+        "date": "2026-07-29",
+        "confirmed": true
+      },
+      "expect": {
+        "focusSegmentCount": 0,
+        "activityObservationCount": 0,
+        "activitySliceCount": 0,
+        "rawImageCount": 0
+      }
+    }
+  ],
+  "expected": {
+    "automaticRetryCount": 0,
+    "fallbackProviderRequestCount": 0,
+    "queuedImageCount": 0,
+    "clientRawImageDiskWriteCount": 0,
+    "lateResultStoredCount": 0,
+    "excludedContentStoredCount": 0,
+    "finalDataCounts": {
+      "focusSegments": 0,
+      "activityObservations": 0,
+      "activitySlices": 0,
+      "rawImages": 0
+    }
+  },
+  "notAssertedByThisFixture": [
+    "LM Studio内部のhistory、log、temporary dataが0件であること。synthetic secretで別途監査する。"
+  ]
+}
