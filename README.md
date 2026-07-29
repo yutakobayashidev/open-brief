@@ -45,6 +45,68 @@ openbrief-cli          CLI、human / JSON output
 
 R0の主な検証は`cargo test --workspace`と`cargo clippy --workspace --all-targets --all-features -- -D warnings`。GC-02 fixtureを、focus event → SQLite → 15分ActivitySliceの統合テストとして実行する。
 
+## Nix flake
+
+flakeはLinux向けのpackage、app、overlay、Home Manager moduleを公開する。
+
+```console
+nix build .#
+nix run .# -- --help
+```
+
+利用可能なoutput:
+
+```text
+packages.<system>.default
+packages.<system>.openbrief
+apps.<system>.default
+overlays.default
+homeManagerModules.default
+homeManagerModules.openbrief
+homeModules.default
+```
+
+Home Managerではconfigとsystemd user serviceを一緒に宣言する。
+
+```nix
+{
+  inputs.openbrief.url = "github:yutakobayashidev/open-brief";
+
+  outputs =
+    {
+      home-manager,
+      nixpkgs,
+      openbrief,
+      ...
+    }:
+    {
+      homeConfigurations.yuta = home-manager.lib.homeManagerConfiguration {
+        pkgs = nixpkgs.legacyPackages.x86_64-linux;
+        modules = [
+          openbrief.homeManagerModules.default
+          {
+            services.openbrief = {
+              enable = true;
+              settings = {
+                retention_days = 7;
+                capture.excluded_apps = [
+                  "1password"
+                  "signal"
+                  "vesktop"
+                ];
+              };
+            };
+          }
+        ];
+      };
+    };
+}
+```
+
+Home Manager管理時は`openbrief enable / disable`を使わず、`home-manager switch`へservice lifecycleを一本化する。既存の`~/.config/openbrief/config.toml`がある場合は、必要な値を`services.openbrief.settings`へ移してから既存fileを退避または削除する。Home Managerは未管理fileを勝手に上書きしない。
+
+serviceは`graphical-session.target`から起動する。niriは`niri-session`または`niri --session`で開始し、`NIRI_SOCKET`をsystemd user managerへimportしておく。raw `niri`起動時のsocket探索や固定path fallbackは提供しない。
+
 ## Architecture Decisions
 
 - [ADR一覧](docs/adr/README.md)

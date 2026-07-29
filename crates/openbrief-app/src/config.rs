@@ -37,6 +37,8 @@ impl Default for CaptureConfig {
                 "org.signal.signal".into(),
                 "discord".into(),
                 "com.discordapp.discord".into(),
+                "vesktop".into(),
+                "dev.vencord.vesktop".into(),
             ],
         }
     }
@@ -128,6 +130,7 @@ mod tests {
         let config = Config::default();
         assert!(config.is_excluded("ORG.SIGNAL.SIGNAL"));
         assert!(config.is_excluded("Discord"));
+        assert!(config.is_excluded("dev.vencord.Vesktop"));
         assert!(!config.is_excluded("firefox"));
     }
 }

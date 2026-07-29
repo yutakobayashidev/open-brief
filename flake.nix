@@ -1,8 +1,8 @@
 {
-  description = "A Nix-flake-based Rust development environment";
+  description = "Local-first context recall for Linux and niri";
 
   inputs = {
-    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1"; # unstable Nixpkgs
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
     fenix = {
       url = "https://flakehub.com/f/nix-community/fenix/0.1";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -13,30 +13,37 @@
     { self, ... }@inputs:
 
     let
-      supportedSystems = [
+      developmentSystems = [
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
       ];
-      forEachSupportedSystem =
-        f:
-        inputs.nixpkgs.lib.genAttrs supportedSystems (
+      linuxSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
+      forSystems =
+        systems: f:
+        inputs.nixpkgs.lib.genAttrs systems (
           system:
           f {
             inherit system;
             pkgs = import inputs.nixpkgs {
               inherit system;
-              overlays = [
-                inputs.self.overlays.default
-              ];
+              overlays = [ self.overlays.default ];
             };
           }
         );
+      forDevelopmentSystems = forSystems developmentSystems;
+      forLinuxSystems = forSystems linuxSystems;
+      homeManagerModule = import ./nix/home-manager.nix {
+        defaultPackage = system: self.packages.${system}.default;
+      };
     in
     {
-      overlays.default = final: prev: {
+      overlays.default = final: _prev: {
         rustToolchain =
-          with inputs.fenix.packages.${prev.stdenv.hostPlatform.system};
+          with inputs.fenix.packages.${final.stdenv.hostPlatform.system};
           combine (
             with stable;
             [
@@ -47,9 +54,55 @@
               rust-src
             ]
           );
+
+        openbrief = final.callPackage ./nix/package.nix {
+          src = self;
+          rustPlatform = final.makeRustPlatform {
+            cargo = final.rustToolchain;
+            rustc = final.rustToolchain;
+          };
+        };
       };
 
-      devShells = forEachSupportedSystem (
+      packages = forLinuxSystems (
+        { pkgs, ... }:
+        {
+          default = pkgs.openbrief;
+          inherit (pkgs) openbrief;
+        }
+      );
+
+      apps = forLinuxSystems (
+        { pkgs, ... }:
+        {
+          default = {
+            type = "app";
+            program = inputs.nixpkgs.lib.getExe pkgs.openbrief;
+            meta.description = "Run the OpenBrief context recall CLI";
+          };
+          openbrief = self.apps.${pkgs.stdenv.hostPlatform.system}.default;
+        }
+      );
+
+      checks = forLinuxSystems (
+        { pkgs, ... }:
+        {
+          package = pkgs.openbrief;
+          home-manager-module = pkgs.callPackage ./nix/tests/home-manager-module.nix {
+            module = homeManagerModule;
+          };
+        }
+      );
+
+      homeManagerModules = {
+        default = homeManagerModule;
+        openbrief = homeManagerModule;
+      };
+
+      # `homeModules` is the newer, shorter spelling used by some consumers.
+      homeModules = self.homeManagerModules;
+
+      devShells = forDevelopmentSystems (
         { pkgs, system }:
         {
           default = pkgs.mkShell {
@@ -64,14 +117,11 @@
               self.formatter.${system}
             ];
 
-            env = {
-              # Required by rust-analyzer
-              RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
-            };
+            env.RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
           };
         }
       );
 
-      formatter = forEachSupportedSystem ({ pkgs, ... }: pkgs.nixfmt);
+      formatter = forDevelopmentSystems ({ pkgs, ... }: pkgs.nixfmt);
     };
 }
