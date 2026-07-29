@@ -1,6 +1,49 @@
 # OpenBrief
 
-Androidアプリの静的解析と認知科学・HCI研究を、独立したAttention Triageアプリの設計へ変換するための調査リポジトリです。
+入力を要求せず「いつ何をしていたか」を思い出せる、local-firstなContext Recall CLIです。認知科学・HCI研究、既存製品の解析、OSS調査も同じリポジトリに残しています。
+
+現在はLinux / Wayland / niri向けのmetadata-only R0を実装しています。foreground app IDと時刻だけを7日間SQLiteへ保存し、window title、PID、画面、音声、agent transcriptは取得しません。画面captureとx870上のLM Studio連携は、R0を実際に使って価値とprivacyを確認した後のR1です。
+
+## Try the R0
+
+```console
+nix develop
+cargo test --workspace
+cargo build --release
+
+# foregroundで安全に試す
+./target/release/openbrief watch
+
+# 別terminalから確認する
+./target/release/openbrief status
+./target/release/openbrief recent
+./target/release/openbrief today
+./target/release/openbrief around 14:00
+```
+
+継続利用する場合は、release binaryを固定した場所へ置いてから`openbrief enable`を実行する。systemd user serviceが同じbinaryのhidden `watch` commandを起動する。
+
+```console
+openbrief enable
+openbrief pause --for 30m
+openbrief resume
+openbrief delete --today
+openbrief disable
+```
+
+configは`${XDG_CONFIG_HOME:-~/.config}/openbrief/config.toml`、DBは`${XDG_DATA_HOME:-~/.local/share}/openbrief/openbrief.sqlite3`へ置く。既定denylistは1Password、Signal、Discord。`delete`はTTY確認が必要で、非対話では`--force --no-input`を両方要求する。
+
+## Rust workspace
+
+```text
+openbrief-cli          CLI、human / JSON output
+    └─ openbrief-app   query、collector、systemd、privacy control
+       ├─ openbrief-core         stateと15分projection
+       ├─ openbrief-source-niri  niri IPC adapter
+       └─ openbrief-store        SQLite authority
+```
+
+R0の主な検証は`cargo test --workspace`と`cargo clippy --workspace --all-targets --all-features -- -D warnings`。GC-02 fixtureを、focus event → SQLite → 15分ActivitySliceの統合テストとして実行する。
 
 ## Architecture Decisions
 
@@ -49,6 +92,7 @@ Androidアプリの静的解析と認知科学・HCI研究を、独立したAtte
 - [Resume CueとWindow Transitionを比較するMVP](docs/research/attention-triage/09-window-transition-mvp-reset.md)
 - [入力不要のActivity Recall Timeline MVP](docs/research/attention-triage/10-activity-recall-timeline-mvp.md)
 - [qwen-audio-agent調査とaudio採用判断](docs/research/attention-triage/11-qwen-audio-agent-assessment.md)
+- [Capture substrateとAgent consumer分離](docs/research/attention-triage/12-capture-substrate-and-agent-consumers.md)
 - [GC-01実装fixture](fixtures/golden-cases/gc-01-gmail-rss-return.json)
 - [GC-02 Activity Recall fixture](fixtures/golden-cases/gc-02-activity-recall-timeline.json)
 - [GC-03 Activity Recall fail-closed fixture](fixtures/golden-cases/gc-03-activity-recall-fail-closed.json)

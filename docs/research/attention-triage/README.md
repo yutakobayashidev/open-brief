@@ -43,8 +43,9 @@ Return: 探索前の作業と次の一手を再提示
 | [07 ADHD Context Resumption](07-adhd-context-resumption-oracle-review.md) | 受動context取得、Resume Pack、Screenpipe依存の是非を確認する |
 | [08 awesome-adhd synthesis](08-awesome-adhd-cross-report-synthesis.md) | ADHD Wiki全体の共通原則、矛盾、証拠強度、OpenBriefへの含意を確認する |
 | [09 Window Transition MVP](09-window-transition-mvp-reset.md) | terminal / Vim / AI coding向けの最小Attention Handoffと検証順を確認する |
-| [10 Activity Recall Timeline MVP](10-activity-recall-timeline-mvp.md) | goal入力なしでwindow時刻と5分ごとの画面から「今日いつ何をしていたか」を返すCLI MVPを確認する |
+| [10 Activity Recall Timeline MVP](10-activity-recall-timeline-mvp.md) | 実装済みmetadata-only R0と、実利用後に判断する画面/VLM R1を確認する |
 | [11 qwen-audio-agent assessment](11-qwen-audio-agent-assessment.md) | realtime voice runtimeのarchitecture、privacy、licenseと、OpenBriefでaudioを後回しにする理由を確認する |
+| [12 Capture substrate and Agent consumers](12-capture-substrate-and-agent-consumers.md) | 記録・検索基盤とLM Studio / Codex推論をprivacy境界付きで分離する |
 | [Screenpipe source reference](../../implementation-references/01-screenpipe-source-reference.md) | 旧MIT module、現行license、niri再利用可否を確認する |
 | [Entire CLI source reference](../../implementation-references/02-entire-cli-source-reference.md) | Agent hook、state machine、CLI patternの採否を確認する |
 | [Attention / Coast static analysis](../../reverse-engineering/attention/README.md) | capture、差分OCR、Accessibility、Agent memory、media retentionの先行実装を確認する |
@@ -88,6 +89,6 @@ Oracleと文献調査が一致した重要点は次です。
 - 自動返信、自動委任、強制ブロック: MVP対象外
 - terminal / Vim / AI coding向け実装は、一枚のResume Cueを中核介入にし、Window Transitionの追加価値をM0 / M1で比較する
 - Resume Cueのscreenshotは、境界keyframeの追加価値が確認された場合だけM2として試す
-- Activity Recallは別laneとして、goalやsession開始を要求せず、foreground window時刻と5分ごとの疎captureから有限な15分timelineを返す
+- Activity Recallは別laneとして、goalやsession開始を要求せず、まずforeground window時刻だけから有限な15分timelineを返すmetadata-only R0を使う
 - Activity Recallのmodelは活動時刻や心理状態を推測せず、時刻はwindow eventから決定し、画像の追加価値をR0 / R1で比較する
 - audioはActivity Recallの観測sourceへ入れず、timelineがGoした後に任意のpush-to-talk bookmarkまたはread-only voice queryとして別評価する

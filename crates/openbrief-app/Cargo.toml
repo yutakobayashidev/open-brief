@@ -1,0 +1,21 @@
+[package]
+name = "openbrief-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+ctrlc.workspace = true
+directories.workspace = true
+openbrief-core = { path = "../openbrief-core" }
+openbrief-source-niri = { path = "../openbrief-source-niri" }
+openbrief-store = { path = "../openbrief-store" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+time.workspace = true
+toml.workspace = true
+
+[lints]
+workspace = true

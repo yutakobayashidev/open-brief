@@ -1,0 +1,35 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/openbrief-app",
+    "crates/openbrief-cli",
+    "crates/openbrief-core",
+    "crates/openbrief-source-niri",
+    "crates/openbrief-store",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+rust-version = "1.96"
+
+[workspace.dependencies]
+clap = { version = "4.6.4", features = ["derive"] }
+ctrlc = { version = "3.5.2", features = ["termination"] }
+directories = "6.0.0"
+niri-ipc = "=26.4.0"
+rusqlite = { version = "0.40.1", features = ["bundled"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0.19"
+time = { version = "0.3.54", features = ["formatting", "local-offset", "macros", "parsing", "serde"] }
+toml = "1.1.4"
+uuid = { version = "1.22.0", features = ["serde", "v4"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "warn"
+pedantic = "warn"

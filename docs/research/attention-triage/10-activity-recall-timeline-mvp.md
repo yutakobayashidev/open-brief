@@ -2,12 +2,13 @@
 
 ## Status
 
-- 改訂日: 2026-07-29
+- 改訂日: 2026-07-30
 - primary user: terminal / Vim / AI coding agentを使い、browser、docs、複数terminalを頻繁に行き来するFounder
 - client: Linux、Wayland、niri 26.04
 - inference host: x870上のLM Studio、Tailscale越しのOpenAI互換API
 - UI: CLI only。Tauri、IDE extension、常時dashboardは対象外
-- 判断: **goalやsession開始を要求せず、foreground windowの時刻と5分ごとの疎な画面観測から、今日いつ何をしていたかを15分単位で返す**
+- 現在地: **metadata-only R0を実装済み。画面captureとLM StudioはR0の実利用後に判断するR1**
+- 判断: **goalやsession開始を要求せず、まずforeground appの時刻だけから、今日いつ何をしていたかを返す**
 
 ## 一文で言うMVP
 
@@ -24,7 +25,24 @@ openbrief today
 openbrief around 14:00
 ```
 
-OpenBriefはniriのforeground transitionから時刻と滞在時間を決定し、5分ごとにforeground window一枚をx870のLM Studioへ送って短い`ActivityObservation`へ変換する。raw画像は保存しない。
+R0のOpenBriefはniriのforeground transitionから時刻と滞在時間を決定し、画面を取得せずmetadataだけを返す。その記録だけでは思い出せないことが実測された場合に限り、R1で5分ごとのforeground captureとx870のLM Studioによる`ActivityObservation`を追加する。raw画像は保存しない。
+
+## 2026-07-30 implementation checkpoint
+
+実装済み:
+
+- Rust CLI、niri event source、SQLite authority、systemd user service
+- `recent / today / around / status / pause / resume / delete`
+- excluded、idle、locked、paused、source unavailableのcontent-free state
+- 7日retention、user-only permission、GC-02 metadata統合test
+
+未実装:
+
+- screenshot、VLM、LM Studio接続、`ActivityObservation`
+- GC-03のvisual capture race contract
+- Tauri、他WM、Agent query API
+
+この境界は機能不足ではなくR0 / R1比較のための意図的なgateである。まずR0を3日使い、app IDと正確なtransition時刻だけで時間想起が足りるかを見る。
 
 ## 何を解決するか
 
@@ -67,14 +85,13 @@ Codex wrapper、required goal、window個別許可、Reflection confirm、Return
 
 ```console
 $ openbrief enable
-Activity recall enabled.
-Capture: foreground window every 5 minutes
+Context recall enabled.
+Mode: metadata only
 Excluded apps: 1password, signal, discord
-Raw screenshots: never stored
-Model: x870 / configured-vlm-id
+Retention: 7 days
 ```
 
-`enable`はuser configとLM Studio接続を検証し、systemd user serviceを有効化してcollectorを開始する。LM Studioが利用できなくてもwindow metadataの収集は開始できる。
+`enable`はuser configとSQLiteを初期化し、systemd user serviceを有効化してcollectorを開始する。R0はnetwork requestを行わない。
 
 app denylistはuser configへ一度だけ置く。日々のwindow切替ごとに許可を求めない。
 
@@ -83,18 +100,12 @@ app denylistはuser configへ一度だけ置く。日々のwindow切替ごとに
 ```console
 $ openbrief today
 10:00–10:15  Ghostty 9m / Firefox 6m
-  OpenBriefのLM Studio adapterを編集
-  Structured Outputの仕様を確認
-
 10:15–10:30  Ghostty 13m / Obsidian 2m
-  capture policyとfixtureを編集
-  不明: 変更がcommit済みか
 
 10:30–10:45  private / excluded 8m, idle 7m
-  内容は記録していません
 ```
 
-時刻と分数はniri eventから算出し、modelには生成させない。内容が観測できなければ推測で埋めず、`不明`または`capture gap`と表示する。
+R0の時刻と分数はniri eventから算出する。内容を観測していないため、app IDをtask名へ言い換えたり、空白を推測で埋めたりしない。
 
 ### 指定時刻の前後を見る
 
@@ -106,12 +117,9 @@ $ openbrief around 14:00
   14:03 Obsidian
   14:08 Ghostty
 
-観測
-  LM Studioのimage inputを調査
-  Rust HTTP clientのtest failureを確認
 ```
 
-`today`は15分bucketの短い一覧、`around`は指定時刻前後30分の詳細である。既定でraw screenshotや全window titleを表示しない。
+`today`は15分bucketの短い一覧、`around`は指定時刻前後30分のexact transition一覧である。既定でraw screenshotやwindow titleを表示しない。
 
 ### 一時停止
 
@@ -123,6 +131,20 @@ openbrief resume
 password、DM、個人情報を扱う前にすぐ止められる。pauseはidempotentで、`--for`を付けた場合だけ自動再開する。
 
 ## 観測pipeline
+
+現在のR0:
+
+```text
+niri foreground event
+        └─ exact timestamp / app ID / content-free state
+                  └─ local SQLite FocusSegment
+                            ├─ deterministic 15-minute ActivitySlice
+                            │       ├─ openbrief recent
+                            │       └─ openbrief today
+                            └─ openbrief around <time>
+```
+
+実利用後に追加価値を検証するR1:
 
 ```text
 niri foreground event
@@ -218,6 +240,7 @@ modelには時刻、duration、window key、心理状態を出力させない。
 openbrief enable
 openbrief disable
 openbrief status [--json]
+openbrief recent [--minutes 30] [--json]
 openbrief today [--date YYYY-MM-DD] [--json]
 openbrief around <HH:MM> [--date YYYY-MM-DD] [--minutes 30] [--json]
 openbrief pause [--for <duration>]
@@ -230,7 +253,8 @@ openbrief watch
 
 - `enable`: configを検証し、systemd user serviceをenable / startする。既にenabledなら成功する。
 - `disable`: serviceをstop / disableする。保存済みdataは削除しない。
-- `status`: `enabled / paused / model unavailable`、最終window event、最終Observation時刻だけを表示する。
+- `status`: `active / paused / disabled`、niri source availability、最終window eventを表示する。
+- `recent`: 現在から指定分数を遡った15分bucketを表示する。
 - `today`: local storeだけを読み、現在日または指定日の15分bucketを表示する。network requestを行わない。
 - `around`: 指定時刻の前後を表示する。`--minutes`は5〜120、既定30。
 - `pause`: captureとcontentを持つmetadata取得を止め、genericなpaused区間だけ残す。
@@ -238,7 +262,7 @@ openbrief watch
 - `delete`: 対象日のevent、Observation、ActivitySliceを連鎖削除する。
 - `watch`: collectorをforegroundで実行する。systemd unitも同じcommandを使う。
 
-`-h / --help`、`--no-color`、`-v / --verbose`は全command、`--version`はrootで受ける。primary dataはstdout、diagnosticとprogressはstderrへ出す。`today`、`around`、`status`だけstableな`--json`を持ち、successとerrorの両方に`schema_version`を付ける。machine timestampはoffset付きRFC 3339に固定し、query range、response byte数、result countへ上限を置く。
+`-h / --help`、`--no-color`、`-v / --verbose`は全command、`--version`はrootで受ける。primary dataはstdout、diagnosticとprogressはstderrへ出す。`recent`、`today`、`around`、`status`は`schema_version`付きの`--json` success responseを持つ。machine timestampはoffset付きRFC 3339に固定する。JSON error envelopeとresponse上限はR0の次のcontract hardeningで追加する。
 
 `delete`はTTYで確認し、non-interactiveでは`--force --no-input`を両方要求する。Ctrl-C時は進行中frameを破棄し、短いcleanup後に終了する。
 
@@ -249,26 +273,23 @@ systemd上の`watch`をcollectorとstoreの唯一のwriterにする。`pause / r
 user configだけを使い、projectごとのgoal fileは作らない。
 
 ```toml
+retention_days = 7
+
 [capture]
 excluded_apps = ["1password", "signal", "discord"]
-
-[model]
-model = "configured-vlm-id"
-origin = "http://<x870-tailscale-ip>:1234"
-credential_ref = "lm-studio-x870"
 ```
 
-場所は`${XDG_CONFIG_HOME:-$HOME/.config}/openbrief/config.toml`とする。credential本文はOS secret storeへ置き、config、CLI flag、environment、logへ入れない。
+場所は`${XDG_CONFIG_HOME:-$HOME/.config}/openbrief/config.toml`とする。R1でmodel credentialを追加する場合、その本文はOS secret storeへ置き、config、CLI flag、environment、logへ入れない。
 
 ## Privacyとretention
 
 | Data | 既定保持 |
 |---|---:|
-| raw screenshot | request memory中だけ |
+| raw screenshot | R0では取得しない |
 | excluded appの内容、app ID、title | 保存しない |
 | FocusSegment | 7日 |
-| ActivityObservation | 7日 |
-| ActivitySlice | 7日 |
+| ActivityObservation | R0では存在しない |
+| ActivitySlice | query時に生成し、保存しない |
 | content非保持の実験metric | 3日間のexperiment終了まで |
 
 - raw frameは成功、失敗、timeout、pause、shutdownで即時破棄する。
@@ -287,6 +308,8 @@ OpenBriefはLM Studio内部のstorageを管理できない。synthetic secretで
 MVPのlocal storeはuser-only permissionにし、full-disk encryptionを運用前提として表示する。ただし、これをapplication-level encryptionとは呼ばない。raw evidenceをdiskへ保存する機能を追加する場合は、DB、WAL、SHM、backupを同じ暗号化境界へ入れ、keyをOS secret storeへ分離することをrelease gateにする。
 
 ## x870のLM Studio
+
+この節はR1候補であり、R0はLM Studioへ接続しない。
 
 OpenBriefはx870のLM StudioへTailscale IPv4で直接接続する。独自backend、reverse proxy、Tailscale Serve、server crateは置かない。
 
@@ -311,16 +334,12 @@ lms server start --bind <x870のTailscale IPv4> --port 1234
 
 ## Rust crate境界
 
-最初は9 crate、1 binary、1 systemd user serviceとする。
+R0は5 crate、1 binary、1 systemd user serviceで実装した。
 
 ```text
-openbrief-core            FocusSegment、ActivityObservation、ActivitySlice、policy
-openbrief-source-niri     niri event、lock、idle
-openbrief-capture-api     Frame、CaptureBackend trait
-openbrief-capture-niri    foreground window capture
-openbrief-model-api       ActivityObservation contract
-openbrief-model-openai    LM Studio Chat Completions adapter
-openbrief-store           JSONL、retention、cascade delete
+openbrief-core            FocusSegment、ActivitySlice
+openbrief-source-niri     niri event
+openbrief-store           SQLite、retention、delete
 openbrief-app             watch / today / around orchestration
 openbrief-cli             clap、human / JSON output、systemd操作
 ```
@@ -329,16 +348,18 @@ openbrief-cli             clap、human / JSON output、systemd操作
 cli → app
       ├─ core
       ├─ source-niri
-      ├─ capture-api ← capture-niri
-      ├─ model-api   ← model-openai
       └─ store
 ```
+
+R1へ進む場合だけ`capture-api / capture-niri / model-api / model-openai`を追加する。
 
 micro-crateはprocess境界ではない。一つのCLI binaryを配布し、OpenBriefの常駐processは同じbinaryの`watch`だけにする。LM Studio以外のHTTP serviceを増やさない。TauriはGo後に`openbrief-app`を呼ぶadapterとして追加する。
 
 常駐service、bounded lane、atomic stateの参考実装とaudioの採用判断は[11 qwen-audio-agent調査](11-qwen-audio-agent-assessment.md)に置く。source codeはcopyせず、Linux systemd lifecycleとsingle process ownerのpatternだけを採用する。
 
 ScreenpipeとEntire CLIのsource-level採否は[OSS implementation references](../../implementation-references/README.md)へ固定した。Screenpipeは全体forkせず、niri source / capture adapterを独立実装する。Entireはhook event正規化、pure lifecycle、CLI UXだけを参考にし、daemonless process modelとGit checkpoint storeは採用しない。
+
+記録・検索をOpenBriefのauthorityとし、LM StudioやCodexを交換可能な推論consumerとして扱う将来像は[12 Capture substrateとAgent consumer](12-capture-substrate-and-agent-consumers.md)に置く。R0は推論consumerを持たない。R1でx870のlocal VLMを使う場合もmetadata-only modeを維持し、Codexへは将来もboundedなLevel 0〜1 queryから開示する。
 
 ## Golden Case
 
@@ -389,19 +410,20 @@ R1がStopならscreen captureとLM Studioを外し、window metadataだけのR0�
 
 ## 実装順
 
-### P0: contract
+### P0: contract（metadata部分完了）
 
-1. GC-02、GC-03、ActivityObservation JSON Schemaをfixture testにする。
-2. x870で一枚の`image_url + json_schema` smoke testを通す。
-3. synthetic secretがLM Studioのhistory / logへ残らないことを監査する。
+1. GC-02のfocus event → SQLite → ActivitySliceをfixture testにした。
+2. GC-03とActivityObservation JSON SchemaはR1開始時にfixture testにする。
+3. x870で一枚の`image_url + json_schema` smoke testを通す。
+4. synthetic secretがLM Studioのhistory / logへ残らないことを監査する。
 
-### P1: metadata timeline
+### P1: metadata timeline（実装済み）
 
 1. `core / source-niri / store / app / cli`で`watch`とFocusSegmentを作る。
 2. metadataだけで`today`と`around`を実装する。
 3. lock、idle、pause、excluded、retention、deleteをtestする。
 
-### P2: sparse visual observation
+### P2: sparse visual observation（R0を3日使った後に判断）
 
 1. `capture-api / capture-niri`で5分tickのforeground captureを作る。
 2. `model-api / model-openai`でActivityObservationを生成する。

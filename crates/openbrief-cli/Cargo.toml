@@ -1,0 +1,22 @@
+[package]
+name = "openbrief-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "openbrief"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+openbrief-app = { path = "../openbrief-app" }
+openbrief-core = { path = "../openbrief-core" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+time.workspace = true
+
+[lints]
+workspace = true

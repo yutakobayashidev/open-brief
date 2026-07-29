@@ -13,3 +13,6 @@ index.android.bundle
 *-decompiled.*
 /jadx-output/
 /apktool-output/
+
+# Rust build output
+/target/
