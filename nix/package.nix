@@ -11,6 +11,7 @@
   libsoup_3,
   makeWrapper,
   nodejs,
+  piAcp,
   pnpm_10,
   pnpmConfigHook,
   pkg-config,
@@ -96,6 +97,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
       "$out/share/icons/hicolor/scalable/apps/openbrief.svg"
     mkdir -p "$out/libexec/openbrief"
     ln -s ${lib.getExe codexAcp} "$out/libexec/openbrief/codex-acp"
+    ln -s ${lib.getExe piAcp} "$out/libexec/openbrief/pi-acp"
   '';
 
   preFixup = ''

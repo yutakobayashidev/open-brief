@@ -5,7 +5,7 @@
 現在は次の二つを実装しています。
 
 - Linux / Wayland / niri向けmetadata-only Context Recall: foreground app IDと時刻だけをSQLiteへ保存する
-- Attention Handoff MVP: Observationを有限Briefへ変え、Codex ACPとの自然言語triageを本人確認後にだけDecision / Curiosity / Return Anchorへ確定する。Tauri DesktopとFlutter companionから同じdaemonへ接続できる
+- Attention Handoff MVP: Observationを有限Briefへ変え、ACP Agentとの自然言語triageを本人確認後にだけDecision / Curiosity / Return Anchorへ確定する。Tauri DesktopとFlutter companionから同じdaemonへ接続できる
 
 window title、PID、画面、音声、Agent transcriptは保存しません。x870上のLM Studioは将来の画面VLM用であり、Brief生成はCodex等のAgentへ委任します。
 
@@ -64,12 +64,19 @@ token_file = "/home/yuta/.config/openbrief/device-token"
 
 外部からは`tailscale serve --bg https+insecure://127.0.0.1:43117`等でtailnet内のHTTPSへ公開し、そのURLとdevice tokenをFlutterへ入力する。自動pairingとtoken失効UIはまだ対象外です。
 
-interactive AgentはDesktopの静的ACP runtime catalogから選択する。現在の組み込みproviderは`codex`です。別buildを明示的に試す場合だけ、advanced overrideとして絶対pathを設定する。
+interactive AgentはDesktopの静的ACP runtime catalogから選択する。組み込みproviderは`codex`と`pi`です。別buildを明示的に試す場合だけ、advanced overrideとして絶対pathを設定する。
 
 ```toml
 [agent]
 provider = "codex"
 executable_path = "/absolute/path/to/codex-acp"
+```
+
+Piを使う場合は、`nix run .#openbrief-pi-acp -- --terminal-login`でPiのmodel providerを設定し、`provider = "pi"`へ変更してdaemonを再起動する。Nix packageは固定版`pi-acp`と互換Pi CLIを同梱する。`pi-acp`はACPのMCP設定をPiへ転送しないため、会話、stream、tool表示、cancelは利用できるが、OpenBriefの`brief_propose` / `triage_propose`はPi providerでは利用できない。
+
+```toml
+[agent]
+provider = "pi"
 ```
 
 既定denylistは1Password、Signal、Discord。`delete`はTTY確認が必要で、非対話では`--force --no-input`を両方要求する。
@@ -115,6 +122,7 @@ nix run .# -- --help
 packages.<system>.default
 packages.<system>.openbrief
 packages.<system>.openbrief-codex-acp
+packages.<system>.openbrief-pi-acp
 apps.<system>.default
 apps.<system>.desktop
 overlays.default

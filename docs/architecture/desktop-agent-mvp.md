@@ -94,7 +94,9 @@ AI SDKのchat stateやtransport abstractionは使いません。状態はplain r
 
 DesktopはBuzzのmanaged-agent設計から静的runtime catalogだけを採用する。catalogはprovider ID、表示名、同梱path、引数、version policy、認証方法の優先hint、OpenBrief MCPの付与可否を持ち、共通のresolve / probe / start / authenticate flowへ変換する。ACP transport自体にはprovider traitを追加しない。選択providerが変わった場合は稼働中runtimeを停止してから新しいentryを起動する。
 
-現在のcatalogはOpenBrief package内の固定版Codex ACPだけを登録する。`agent.provider = "codex"`が既定で、`agent.executable_path`は別buildを検証する場合だけのadvanced overrideである。dynamic harness、PATH探索、自動install、provider fallbackは導入しない。
+現在のcatalogはOpenBrief package内の固定版Codex ACPとPi ACPを登録する。`agent.provider = "codex"`が既定で、`agent.executable_path`は別buildを検証する場合だけのadvanced overrideである。dynamic harness、PATH探索、自動install、provider fallbackは導入しない。
+
+Pi providerはACP v1の会話、stream、tool表示、cancelを共通runtimeで扱う。ただし`pi-acp` v0.0.33はACPで受け取ったMCP serverをPiへ転送せず、terminal authもACP `authenticate` requestでは実行しない。このため`openbrief_mcp`を無効にし、Pi側のmodel provider設定を事前条件とする。構造化proposalとDesktopからのterminal loginは、upstream capabilityまたは明示的な別設計が整うまで対応範囲に含めない。
 
 Nix packageには`openbrief`、`openbriefd`、`openbrief-desktop`が同じ`bin` directoryへ入ります。Desktopは同じdirectoryのdaemonをmanaged childとして、daemonは同じdirectoryのCLIをMCP subprocessとして起動します。
 

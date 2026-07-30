@@ -57,6 +57,7 @@
 
         openbrief = final.callPackage ./nix/package.nix {
           codexAcp = final.openbrief-codex-acp;
+          piAcp = final.openbrief-pi-acp;
           src = self;
           rustPlatform = final.makeRustPlatform {
             cargo = final.rustToolchain;
@@ -65,13 +66,16 @@
         };
 
         openbrief-codex-acp = final.callPackage ./nix/codex-acp.nix { };
+        openbrief-pi-acp = final.callPackage ./nix/pi-acp.nix {
+          piCodingAgent = final.pi-coding-agent;
+        };
       };
 
       packages = forLinuxSystems (
         { pkgs, ... }:
         {
           default = pkgs.openbrief;
-          inherit (pkgs) openbrief openbrief-codex-acp;
+          inherit (pkgs) openbrief openbrief-codex-acp openbrief-pi-acp;
         }
       );
 

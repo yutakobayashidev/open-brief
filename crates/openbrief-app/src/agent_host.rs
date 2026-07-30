@@ -229,9 +229,14 @@ impl AgentService {
                 }))
             }
             Err(AgentError::SessionUnavailable {
-                message: _,
+                message,
                 mut auth_methods,
             }) if !auth_methods.is_empty() => {
+                if let Some(instructions) = spec.manual_auth_instructions {
+                    return Ok(
+                        self.fail_status(format!("{message}. {instructions}"), Some(descriptor))
+                    );
+                }
                 spec.prioritize_auth_methods(&mut auth_methods);
                 Ok(self.publish_status(AgentStatus {
                     availability: AvailabilityStatus::Available,

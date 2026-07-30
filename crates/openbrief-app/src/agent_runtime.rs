@@ -12,9 +12,24 @@ const CODEX: AcpRuntimeSpec = AcpRuntimeSpec {
     args: &[],
     minimum_version: Some((1, 1, 7)),
     preferred_auth_method_hint: Some("chat"),
+    manual_auth_instructions: None,
     openbrief_mcp: true,
 };
-const RUNTIMES: &[AcpRuntimeSpec] = &[CODEX];
+const PI: AcpRuntimeSpec = AcpRuntimeSpec {
+    id: "pi",
+    label: "Pi",
+    packaged_path: "libexec/openbrief/pi-acp",
+    args: &[],
+    // pi-acp does not implement --version. ACP initialize negotiates v1.
+    minimum_version: None,
+    preferred_auth_method_hint: Some("pi_terminal_login"),
+    manual_auth_instructions: Some(
+        "Piのmodel providerをterminalで設定してからopenbriefdを再起動してください",
+    ),
+    // pi-acp accepts ACP MCP configuration but does not forward it to Pi.
+    openbrief_mcp: false,
+};
+const RUNTIMES: &[AcpRuntimeSpec] = &[CODEX, PI];
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct AcpRuntimeSpec {
@@ -25,6 +40,7 @@ pub(crate) struct AcpRuntimeSpec {
     /// `None` delegates compatibility to the ACP initialize handshake.
     minimum_version: Option<(u64, u64, u64)>,
     preferred_auth_method_hint: Option<&'static str>,
+    pub(crate) manual_auth_instructions: Option<&'static str>,
     pub(crate) openbrief_mcp: bool,
 }
 
@@ -190,10 +206,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn catalog_exposes_codex_without_provider_specific_control_flow() {
+    fn catalog_exposes_supported_runtimes_without_provider_specific_control_flow() {
         let spec = runtime_spec("codex").expect("codex should be registered");
         assert_eq!(spec.label, "Codex");
         assert_eq!(spec.packaged_path, "libexec/openbrief/codex-acp");
+        assert!(spec.openbrief_mcp);
+
+        let spec = runtime_spec("pi").expect("pi should be registered");
+        assert_eq!(spec.label, "Pi");
+        assert_eq!(spec.packaged_path, "libexec/openbrief/pi-acp");
+        assert_eq!(spec.minimum_version, None);
+        assert!(spec.manual_auth_instructions.is_some());
+        assert!(!spec.openbrief_mcp);
         assert!(runtime_spec("unknown").is_none());
     }
 
@@ -233,6 +257,7 @@ mod tests {
             args: &["serve"],
             minimum_version: None,
             preferred_auth_method_hint: None,
+            manual_auth_instructions: None,
             openbrief_mcp: false,
         };
         let resource_dir = Path::new(env!("CARGO_MANIFEST_DIR"));

@@ -32,6 +32,8 @@ DesktopのRust processが公式ACP Rust SDKで、選択されたlocal ACP runtim
 
 最初のcatalog entryはOpenBrief packageに固定された`codex-acp`です。Nix packageでは`$out/libexec/openbrief/codex-acp`、通常のDesktop packageでは同じversionのTauri resourceを内部解決します。configの`agent.provider`は`codex`を既定とし、`agent.executable_path`はadvanced overrideだけに使います。ACPはinitialize、session、prompt stream、permission、cancel、process cleanupを担当します。
 
+第二のentryとして固定版`pi-acp`を提供します。Piも同じACP runtimeを使い、provider固有clientは追加しません。ただし`pi-acp` v0.0.33はACP MCP設定をPiへ転送しないためOpenBrief MCPを付与せず、会話、stream、tool表示、cancelだけを対応範囲とします。Piのterminal authは事前設定を要求し、ACP `authenticate`の成功をlogin完了とは扱いません。
+
 OpenBriefは同じCLI binaryのhidden `openbrief mcp serve`をstdio MCP serverとしてsessionへ渡し、次の二toolだけを公開します。
 
 - `brief_propose`: 最大3件の根拠付き有限Briefをinert proposalとして保存する
