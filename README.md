@@ -165,5 +165,6 @@ serviceは`graphical-session.target`から起動する。niriは`niri-session`�
 - [参照方針と目次](docs/implementation-references/README.md)
 - [Screenpipe source reference](docs/implementation-references/01-screenpipe-source-reference.md)
 - [Entire CLI source reference](docs/implementation-references/02-entire-cli-source-reference.md)
+- [Buzz source reference](docs/implementation-references/03-buzz-source-reference.md)
 
 解析対象APKは `apks/com.tiimo.androidappreactnative/` に置かれています。APKや復元コードを配布・転載することを目的としていません。

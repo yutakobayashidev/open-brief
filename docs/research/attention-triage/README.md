@@ -48,6 +48,7 @@ Return: 探索前の作業と次の一手を再提示
 | [12 Capture substrate and Agent consumers](12-capture-substrate-and-agent-consumers.md) | 記録・検索基盤とLM Studio / Codex推論をprivacy境界付きで分離する |
 | [Screenpipe source reference](../../implementation-references/01-screenpipe-source-reference.md) | 旧MIT module、現行license、niri再利用可否を確認する |
 | [Entire CLI source reference](../../implementation-references/02-entire-cli-source-reference.md) | Agent hook、state machine、CLI patternの採否を確認する |
+| [Buzz source reference](../../implementation-references/03-buzz-source-reference.md) | Tauri Desktop、ACP runtime、Hermes / OpenClaw接続の採否を確認する |
 | [Attention / Coast static analysis](../../reverse-engineering/attention/README.md) | capture、差分OCR、Accessibility、Agent memory、media retentionの先行実装を確認する |
 | [GC-01 fixture](../../../fixtures/golden-cases/gc-01-gmail-rss-return.json) | ゴールデンケースを実装・テスト用の入力と期待状態として使う |
 | [GC-02 fixture](../../../fixtures/golden-cases/gc-02-activity-recall-timeline.json) | goalなしのmulti-window focus、5分tick、today / aroundをsynthetic dataで検証する |

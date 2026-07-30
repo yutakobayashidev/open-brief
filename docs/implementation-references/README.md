@@ -20,6 +20,7 @@ OpenBriefの実装中に、同じOSS repositoryを毎回最初から調べ直さ
 |---|---|---|
 | [Screenpipe](01-screenpipe-source-reference.md) | 現行source `d114e14…`、最終MIT `892199f…` | forkせず、旧MITの小moduleだけ条件付き評価 |
 | [Entire CLI](02-entire-cli-source-reference.md) | stable `v0.9.0` / `8b77ad4…` | Go codeを依存せず、event・state・CLI patternを採用 |
+| [Buzz](03-buzz-source-reference.md) | source `63496cc…` | Tauri process ownershipとACP harness patternだけを採用 |
 
 ## 共通ルール
 
