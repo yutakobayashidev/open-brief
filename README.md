@@ -140,6 +140,8 @@ serviceは`graphical-session.target`から起動する。niriは`niri-session`�
 
 ## Architecture Decisions
 
+- [Design memo: OpenBrief as an Attention Control Plane](docs/architecture/attention-control-plane.md)
+- [Desktop Agent MVP](docs/architecture/desktop-agent-mvp.md)
 - [ADR一覧](docs/adr/README.md)
 - [ADR 0001: Local-firstなデータ境界とModel Gateway](docs/adr/0001-adopt-local-first-data-and-model-boundaries.md)
 - [ADR 0002: Attention SignalとSlack Status Output](docs/adr/0002-adopt-attention-signals-and-slack-status-output.md)

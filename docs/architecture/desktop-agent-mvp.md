@@ -1,5 +1,7 @@
 # Desktop Agent MVP
 
+上位の製品定義と、Activity Recall・Attention Triage・自然言語入力の関係は[Attention Control Plane design memo](attention-control-plane.md)にまとめています。
+
 ## Outcome
 
 このMVPは、Observationを眺めるdashboardではなく、次の注意遷移を一画面で完結させます。

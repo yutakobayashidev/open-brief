@@ -24,3 +24,5 @@
 - Agent runtimeの安全性を理由に、利用者へadapterの手動installと絶対path設定をそのまま要求しない。Nix packageやDesktop releaseへversion固定・hash検証済みのACP adapterを同梱し、sibling pathを内部解決することは、runtime downloadやPATH探索とは異なる。設定はcustom runtime用overrideにし、readinessはcommand responseで確実に表示する。
 - frontend package managerを、既に環境へ入っているという理由だけでBunへ固定しない。ユーザーがpnpmを希望するprojectでは、Tauri hook、lockfile、Nix dependency fetch、README、dev shellをpnpmへ統一する。upstream packageの再現buildがpackage-lockを要求する場合だけ、その外部package境界ではnpmを残す。
 - Tauri Desktopはbuild成功やwindow生成だけで動作確認済みにしない。Nix packageからrelease binaryを実際に起動し、埋め込みfrontend、Capability ACL、sidecar process、画面上の応答まで確認する。直接`cargo build`するpackageでは`custom-protocol` featureを明示し、frontendが使うEvent権限を最小Capabilityとして宣言する。
+- OpenBriefの画面履歴と有限Briefを、一つのAI優先順位pipelineへ潰さない。画面履歴は時間盲に対するActivity Recall、Gmail等は外部情報のAttention Triage、自然言語dumpは本人意図の補正入力として意味を分ける。共有するのはObservation ingressとlocal authorityであり、それぞれの効果も別に測る。
+- `commit&push`のpush認証だけが失敗している場合でも、ユーザーが明示的に「無視してcommit」と指示したら、GitHub認証を再要求せずローカルcommitを完了する。push不能とcommit不能を同じblockerとして扱わない。
