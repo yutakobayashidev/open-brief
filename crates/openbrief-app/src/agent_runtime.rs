@@ -3,7 +3,7 @@ use std::process::Stdio;
 use std::time::Duration;
 
 use openbrief_agent::AuthMethodInfo;
-use serde::Serialize;
+use openbrief_protocol::{RuntimeDescriptor, RuntimeSource};
 
 const CODEX: AcpRuntimeSpec = AcpRuntimeSpec {
     id: "codex",
@@ -34,24 +34,6 @@ impl AcpRuntimeSpec {
             methods.sort_by_key(|method| !method.id.to_ascii_lowercase().contains(hint));
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct RuntimeDescriptor {
-    pub(crate) provider_id: String,
-    pub(crate) label: String,
-    pub(crate) source: RuntimeSource,
-    pub(crate) version: Option<String>,
-    pub(crate) path: PathBuf,
-}
-
-#[derive(Debug, Clone, Copy, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum RuntimeSource {
-    Packaged,
-    NixStore,
-    Override,
 }
 
 #[derive(Debug, thiserror::Error)]

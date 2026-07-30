@@ -26,12 +26,49 @@ Return Threadは画面左に常時残り、Agent sessionやDesktopを再起動�
 |---|---|---|
 | Observation ingress | `openbrief ingest` | versioned JSON、冪等batch ID、source coverage |
 | Local authority | `openbrief-store` | Observation、proposal、本人確定状態を別tableで保存 |
-| Agent control | `openbrief-agent` | 公式ACP SDK、明示path、read-only mode、stream、cancel、timeout |
+| Agent control | `openbriefd` + `openbrief-agent` | 公式ACP SDK、明示path、read-only mode、stream、cancel、timeout |
 | Agent action | `openbrief mcp serve` | `brief_propose`、`triage_propose`だけ |
-| Confirmation | Tauri command | 選択要素だけを一transactionで本人状態へ確定 |
-| UI | React reducer | Brief、Return Thread、conversation、readiness、proposal確認 |
+| Confirmation | `openbriefd` command | 選択要素だけを一transactionで本人状態へ確定 |
+| UI | React / Flutter controller | Brief、Return Thread、conversation、readiness、proposal確認 |
 
 ACPとMCPを同じものとして扱いません。ACPはDesktopとstateful Agentのsession lifecycle、MCPはAgentからOpenBriefへ提案を書き込む狭いaction planeです。
+
+## Target deployment: daemon版とApp版
+
+現行MVPは、同じheadless binaryを二つの起動形態で使う。「serverless daemon」はcloud serverを要求せず、本人の端末またはx870で完結するlocal-first daemonを意味する。
+
+```text
+openbrief-core
+  ├─ openbriefd       SQLite、collector、VLM、ACP runtimeのowner
+  ├─ openbrief CLI    local daemon client
+  ├─ OpenBrief App    Tauri desktop client
+  └─ Flutter App      authenticated remote client
+```
+
+### Daemon版
+
+Linuxでは`systemd --user`が`openbriefd`を所有する。GUIを起動していなくても、Activity Recall、scheduled producer、VLM変換、Brief生成、Agent sessionを継続できる。CLIとTauriはUnix domain socketへ接続する。Windowsへ展開する場合はnamed pipeとOS service相当を別adapterとして追加する。
+
+### App版
+
+system serviceを設定したくない利用者向けに、Tauriが同じ`openbriefd` binaryをmanaged childとして起動する。App終了時はgraceful shutdownし、配下のACP、MCP、Agent subprocessをprocess tree単位で回収する。既にsystemd版daemonが動いている場合は新しいchildを起動せず、そのinstanceへ接続する。
+
+### 共通のownership
+
+- SQLiteを開いて書き込むauthorityは`openbriefd`だけにする
+- ACP adapter、session、permission broker、cancel、process cleanupも`openbriefd`が所有する
+- CLI、Tauri、Flutterはraw SQLiteやraw ACP JSON-RPCへ接続しない
+- local clientはUnix socket / named pipe、FlutterはTailscale上の認証済みHTTP / WebSocketを使う
+- remote APIはsnapshot、Agent turn、proposal確認と、それらのdomain eventだけを公開する
+- FlutterへCodex credentialやDesktopのmaster keyを複製せず、失効可能なdevice固有credentialを発行する
+
+現行Linux実装はcontrol socketをsingle-instance境界にする。接続可能なsocketがあればTauriはそのdaemonへattachし、接続不能なstale socketだけを削除してmanaged childを起動する。データschemaとapplication serviceは共通にし、起動ownerとtransportだけをadapterとして分ける。
+
+Unix socket上のdomain command / event contract、`openbriefd`へのstore・Agent ownership移行、bearer token付きremote transport、Flutter companionまでは実装済み。自動pairingとdevice token失効管理は次段階とする。local RPCをそのままインターネットへ公開しない。
+
+Rustのwire型は`openbrief-protocol`、Unix socket clientは`openbrief-client`へ分離する。Dart側も`packages/openbrief_client`がHTTP / WebSocketとwire modelを所有し、Flutter Appはsecure storage、画面状態、表示だけを所有する。
+
+Desktopは`Status.control_protocol_version`を起動時に検証する。systemd等が管理する古いdaemonへ接続した場合は、そのprocessを勝手に停止せず、serviceの再起動またはupgradeを求める明示的なerrorで終了する。
 
 ## Data and privacy
 
@@ -59,7 +96,7 @@ DesktopはBuzzのmanaged-agent設計から静的runtime catalogだけを採用�
 
 現在のcatalogはOpenBrief package内の固定版Codex ACPだけを登録する。`agent.provider = "codex"`が既定で、`agent.executable_path`は別buildを検証する場合だけのadvanced overrideである。dynamic harness、PATH探索、自動install、provider fallbackは導入しない。
 
-Nix packageには`openbrief`と`openbrief-desktop`が同じ`bin` directoryへ入ります。Desktopは同じdirectoryのCLIをMCP subprocessとして起動します。
+Nix packageには`openbrief`、`openbriefd`、`openbrief-desktop`が同じ`bin` directoryへ入ります。Desktopは同じdirectoryのdaemonをmanaged childとして、daemonは同じdirectoryのCLIをMCP subprocessとして起動します。
 
 ## Scheduled producer
 

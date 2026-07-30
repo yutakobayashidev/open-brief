@@ -15,6 +15,8 @@ ACPはDesktopとstateful Agentを結ぶcontrol planeとして使う。Hermes cro
 | Repository | [block/buzz](https://github.com/block/buzz) |
 | 固定SHA | [`63496cc1d4c6f1b7c613801bdcc694169dcf391a`](https://github.com/block/buzz/tree/63496cc1d4c6f1b7c613801bdcc694169dcf391a) |
 | Commit date | 2026-07-29 |
+| Mobile追補SHA | [`61b96c9828d1dd54106b570d87a54edbc92bb9c4`](https://github.com/block/buzz/tree/61b96c9828d1dd54106b570d87a54edbc92bb9c4) |
+| Mobile追補日 | 2026-07-31 |
 | License | [Apache License 2.0](https://github.com/block/buzz/blob/63496cc1d4c6f1b7c613801bdcc694169dcf391a/LICENSE) |
 | 調査日 | 2026-07-30 |
 
@@ -82,14 +84,15 @@ OpenBriefのDesktop MVPにはrelayやprocess poolがないため、次へ単純�
 
 ```text
 OpenBrief Tauri core
-  └─ OpenBriefAgentClient
-       └─ ACP Agent subprocess
+  └─ Unix socket client
+       └─ openbriefd
+            └─ ACP Agent subprocess
 
 OpenBrief local store
   └─ Brief / source reference / UserDecision authority
 ```
 
-将来cron eventや複数consumerを調停する必要が出ても、最初からBuzz型harnessを別processにしない。Tauriを閉じても動く`openbriefd`が必要になった時だけ、Agent runtimeのownerをdaemonへ移す。
+現行Desktop MVPでは同じ`openbriefd`を、`systemd --user`が所有するheadless daemon版と、Tauriがmanaged childとして所有するApp版の両方で使う。TauriはACP runtimeを直接所有しない。詳細は[Desktop Agent MVPのtarget deployment](../architecture/desktop-agent-mvp.md#target-deployment-daemon版とapp版)に固定する。
 
 ## Buzz CLI、ACP、MCPの関係
 
@@ -142,6 +145,128 @@ GooseやClaude CodeのようにMCP sidecarを使わないruntimeは、Agent自�
 個人用OpenBrief Desktopでは、ACPの`agent_message_chunk`をtyped eventとして直接UIへ表示する。Agentに`openbrief` CLIを実行させなければ会話へ回答できない構造は採らない。
 
 `openbrief` CLI / MCPは、timelineとBriefのbounded read、reversible triage等のdomain toolに限定する。共有channelへの複数投稿や別Agentへのdelegationが必要になった場合だけ、Agentが投稿先を選ぶBuzz型action planeを再評価する。
+
+## Flutter MobileとACPの接続
+
+### 結論
+
+Buzz MobileはACPへ直接接続しない。Flutter appはNostr clientとしてRelayへ接続し、別hostで動く`buzz-acp`がRelay eventを受けてlocal ACP subprocessを操作する。
+
+```text
+Buzz Flutter Mobile
+  │  kind 9: @agentを含む署名済みmessage
+  ▼
+Buzz Relay
+  │  WebSocket subscription
+  ▼
+buzz-acp（desktop、server等の常時稼働host）
+  │  stdio ACP: initialize / session/new / session/prompt
+  ▼
+Codex / Claude / Goose等
+  │  buzz messages send
+  ▼
+Buzz Relay
+  │  通常のchannel message
+  ▼
+Buzz Flutter Mobile
+```
+
+[`mobile/pubspec.yaml`](https://github.com/block/buzz/blob/61b96c9828d1dd54106b570d87a54edbc92bb9c4/mobile/pubspec.yaml#L9-L44)にはWebSocket、Nostr、secure storage、暗号libraryがあるが、ACP SDKはない。したがって「mobileからACPへremote接続」ではなく、「Relayをdomain transportとして共有し、その裏でharnessがACPをlocal実行する」構成である。
+
+### promptと最終回答
+
+Mobileの[`SendMessage`](https://github.com/block/buzz/blob/61b96c9828d1dd54106b570d87a54edbc92bb9c4/mobile/lib/features/channels/send_message_provider.dart#L42-L89)は次を行う。
+
+1. channelを`h` tag、mention先を`p` tagへ入れる
+2. kind 9 eventをuserのNostr private keyで署名する
+3. NIP-42認証済みWebSocketへpublishし、Relayの`OK`を待つ
+
+`buzz-acp`はRelay subscription上でauthor policyとsubscription ruleを確認し、eventをchannel queueへ入れてACPの`session/prompt`へ変換する。AgentのACP出力は直接channel messageにならない。[`agent_message_chunk`](https://github.com/block/buzz/blob/61b96c9828d1dd54106b570d87a54edbc92bb9c4/crates/buzz-acp/src/acp.rs#L1714-L1720)はstream log / observerへ流れるだけで、最終回答はAgentが[`buzz messages send`](https://github.com/block/buzz/blob/61b96c9828d1dd54106b570d87a54edbc92bb9c4/crates/buzz-acp/src/base_prompt.md#L64-L74)を実行して通常messageとしてRelayへ投稿する。
+
+このためMobileはACP session IDやAgent processを所有しない。通常のchannel subscriptionを再接続時にreplayし、回答messageを他の参加者の投稿と同じ方法で受信する。
+
+### 途中経過はACP transportではなくObserver mirror
+
+BuzzはACPのtool call、thought、message chunk等をMobileへ見せるため、NIP-AOのkind 24200を別に使う。
+
+```text
+ACP notification
+  → buzz-acp observer
+  → NIP-44 encrypted kind 24200
+  → Relayのin-memory pub/sub
+  → Mobileで復号してactivity UIへ表示
+```
+
+[`NIP-AO`](https://github.com/block/buzz/blob/61b96c9828d1dd54106b570d87a54edbc92bb9c4/docs/nips/NIP-AO.md#L18-L70)では、Agentとownerの間でtelemetry / control frameをNIP-44暗号化する。これはephemeral eventであり、Relayは永続化・検索・audit log投入をしてはならない。[`buzz-acp`](https://github.com/block/buzz/blob/61b96c9828d1dd54106b570d87a54edbc92bb9c4/crates/buzz-acp/src/lib.rs#L790-L832)がAgent側で暗号化・署名してpublishし、Mobileの[`observer_subscription.dart`](https://github.com/block/buzz/blob/61b96c9828d1dd54106b570d87a54edbc92bb9c4/mobile/lib/features/channels/agent_activity/observer_subscription.dart#L109-L217)はowner宛てframeだけを検証・復号し、Agentごとに最大800件をmemoryへ保持する。
+
+NIP-AO自体はownerからAgentへの`cancel_turn`も定義し、`buzz-acp`はcontrol frameの署名、owner、freshnessを再検証してcancelへ変換する。ただし追補snapshotのFlutter実装で確認できるのはobserverの受信側であり、Mobileからcontrol frameを送るUI / publisherはまだ見当たらない。Mobileで表示できることと、MobileからACP lifecycleを完全操作できることは分けて評価する。
+
+### pairingとcredential
+
+Mobile onboardingはNIP-ABの`nostrpair://` QRを使う。ephemeral key、共有secret、SAS照合、暗号化payloadでdesktop側から`relayUrl`、`pubkey`、`nsec`を受け取り、RelayへNIP-42接続できることを検証してから保存する。[`pairing_provider.dart`](https://github.com/block/buzz/blob/61b96c9828d1dd54106b570d87a54edbc92bb9c4/mobile/lib/features/pairing/pairing_provider.dart#L448-L481)と[`community_storage.dart`](https://github.com/block/buzz/blob/61b96c9828d1dd54106b570d87a54edbc92bb9c4/mobile/lib/shared/community/community_storage.dart#L19-L28)から、同じNostr `nsec`をMobileのsecure storageへ移す設計だと分かる。
+
+これはBuzzではMobile自身がmessageへ署名するために必要だが、OpenBriefがそのまま採る理由はない。Codex login token、Agent credential、Desktopのmaster keyをMobileへ複製してはならない。
+
+### OpenBrief Flutterへの判断
+
+OpenBriefはBuzz Relayではなくlocal SQLiteをauthorityとする。現行MVPではACP processを`openbriefd`が所有する。将来のFlutter clientにも、このdaemonをremote application boundaryとして使う。
+
+```text
+Flutter companion
+  │  authenticated domain command / event stream
+  ▼
+openbriefd（x870またはdesktop）
+  ├─ OpenBrief local authority
+  ├─ ACP runtime / session owner
+  └─ VLM / source producer
+```
+
+Mobileへ公開するのはraw ACP JSON-RPCではなく、`BriefUpdated`、`AgentStatusChanged`、`TurnDelta`、`ProposalReceived`、`DecisionConfirmed`等のOpenBrief domain eventと、対応するcommandにする。これによりACP adapter、Agent種別、session ID、permission broker、process cleanupをserver側の実装詳細として保てる。
+
+最初のFlutter companionは次へ限定する。
+
+1. QRでx870 / desktopの`openbriefd`へdevice pairingする
+2. 有限Brief最大3件とReturn Anchorを読む
+3. 自然言語dumpを送り、Agentの提案をforegroundでstream表示する
+4. 「今日扱う / 扱わない / 戻る」を本人がconfirmする
+5. 切断後はcursorから再同期し、同じconfirmをidempotency keyで重複適用しない
+
+認証はdevice固有keyとrevoke可能なcredentialにし、Tailscaleは到達性とdevice identityの一層として利用する。画面frameはx870側に残し、Mobileへは要約と明示要求された最小evidenceだけを返す。iOS / Androidのbackground socketをAgent lifecycleの前提にせず、foregroundのevent streamと、後続の完了push notificationを分ける。
+
+Buzzから採るべき中核はRelayそのものではなく、次の二つである。
+
+- Agent runtimeをMobileから分離し、常時稼働hostへ閉じる
+- durableな最終状態とephemeralな実行telemetryを別contractにする
+
+### `buzz-acp`の常駐化はDesktop-owned child process
+
+ここでいう常駐は、`systemd` / `launchd`へ登録された独立daemonではない。Buzz Desktopが起動中のmanaged runtimeとして`buzz-acp`を所有する。
+
+```text
+Tauri Desktop
+  ├─ AppState.managed_agent_processes（Child handle / runtime key）
+  ├─ managed-agents.json（設定・start_on_app_launch）
+  └─ runtime receipt（PID、instance、started_at）
+       ↓
+     buzz-acp child
+       ↓
+     ACP Agent process pool
+```
+
+ライフサイクルは次の通りである。
+
+1. Desktop boot時はすぐspawnせず、active workspaceのRelayとidentityが決まるまで`managed_agent_restore_pending`を立てる
+2. workspace apply後、`start_on_app_launch=true`のlocal agentだけを復元する。既存PID、receipt、孤児processを先に検査する
+3. `Command`で`buzz-acp`をspawnし、`BUZZ_PRIVATE_KEY`、Relay URL、Agent command、MCP commandなどを環境変数で注入する
+4. Unixではharnessを独立process group、WindowsではJob Objectへ入れ、ACP配下のMCP / Agent subprocessも同じ単位で管理する
+5. `buzz-acp`はRelay WebSocketをlistenし、channel eventをqueueへ入れる。ACP Agent自体はpool内で eagerまたはlazyに起動する
+6. Desktop終了時はin-flight turnにgrace periodを与え、process group / Job Objectを停止する。別instanceの残骸はboot時と60秒周期のsweepで回収する
+
+根拠は、[workspace apply後のrestore](https://github.com/block/buzz/blob/61b96c9828d1dd54106b570d87a54edbc92bb9c4/desktop/src-tauri/src/commands/workspace.rs#L236-L280)、[auto-start候補の選別](https://github.com/block/buzz/blob/61b96c9828d1dd54106b570d87a54edbc92bb9c4/desktop/src-tauri/src/managed_agents/restore.rs#L166-L189)、[child spawnとprocess group](https://github.com/block/buzz/blob/61b96c9828d1dd54106b570d87a54edbc92bb9c4/desktop/src-tauri/src/managed_agents/runtime.rs#L879-L958)、[harnessのRelay loop / pool起動](https://github.com/block/buzz/blob/61b96c9828d1dd54106b570d87a54edbc92bb9c4/crates/buzz-acp/src/lib.rs#L1295-L1321)にある。
+
+したがって、Buzz Desktopを終了すればlocal `buzz-acp`も原則終了する。Mobileから使えるのは、Desktopまたは別途稼働させたremote backendがRelayへ接続している間であり、MobileがACPを起こしているわけではない。
+
+OpenBriefでは同じ`openbriefd`を、Tauri Desktop起動中だけのmanaged-child modeと、x870等で`systemd --user`が常時稼働させるdaemon modeに分ける。Flutterから直接ACPへ接続せず、`openbriefd`がACP childとsessionを所有する。
 
 ## Source map
 
@@ -567,7 +692,7 @@ adapterがClaude Agent SDKを利用するため、Claude Codeの全CLI挙動と�
 
 ACPをOpenAI-compatible `/v1/chat/completions`へ偽装しない。逆にLLM Provider responseをACP tool eventとして捏造しない。
 
-remote ACP transportは固定snapshot時点で発展中であり、OpenBrief MVPはlocal stdioを基準にする。remote Agentは、local bridge commandがremote Gatewayへ接続する場合だけcatalogへ入れる。
+remote ACP transportは固定snapshot時点で発展中であり、OpenBriefはlocal stdioを基準にする。runtime catalogへ入れられるのはstable ACPをstdioで提供するadapterだけとし、remote Gatewayのnative protocolは実装しない。
 
 ### OpenBrief MCPのownership
 
@@ -575,7 +700,7 @@ MVPのMCP serverは`openbrief mcp serve`という同一binaryのstdio modeにす
 
 公開toolは`brief_propose`と`triage_propose`だけにする。どちらもinert proposalを保存し、UserDecision、CuriosityCapture、ReturnAnchorを直接作れない。本人がDesktopで確認したときだけapplication serviceが確定する。external write toolは公開しない。stdio subprocessはAgent runtimeのprocess treeと一緒に終了する。
 
-これはlocal stdioだけの境界であり、Bearer tokenを追加しない。OpenClawのようにtoolが別Gatewayで動くruntimeを追加する場合は、localhost / Tailnet endpoint、認証、scope、retentionを別設計にする。
+これはlocal stdioだけの境界であり、Bearer tokenを追加しない。toolが別Gatewayで動くAgentは、OpenBrief MCPを安全にstdioで渡せないため現行catalogの対象外とする。
 
 ## scheduled producerからObservationを受ける境界
 
@@ -703,6 +828,22 @@ MCPは既存CLIのhidden subcommandとして起動し、独立crateや独立配�
 | mesh LLM provider | x870 LM StudioをModel Gatewayから使う |
 | full `acp.rs` copy | Buzz固有extensionとenv mergeが多い |
 
+## Transport再評価
+
+2026-07-31にACP stable v1、Codex app-server、Buzz Mobileを再比較した。
+
+| Boundary | Reference behavior | OpenBrief decision |
+|---|---|---|
+| ACP | stdio上のJSON-RPCでinitialize、session、stream、cancelを扱う | `openbriefd`内部のAgent境界だけに使う |
+| Codex app-server | stdio / WebSocket / Unix socketでCodex固有thread・turn APIを公開する | backpressureやlifecycleだけ参考にし、protocolは採らない |
+| Buzz Mobile | Relay WebSocketでdomain messageを扱い、ACPへ直接接続しない | MobileとACP processを分離する判断だけ採る |
+| OpenBrief local | CLI / Tauriからdaemonへ短いone-shot操作を送る | Unix socket上のtyped JSONを維持する |
+| OpenBrief remote | snapshot、turn開始、proposal確認、domain eventが必要 | HTTPS command＋server-to-client WebSocketを維持する |
+
+Codex app-serverのJSON-RPCはrich Codex clientのためのpublic APIであり、ACPの代替ではない。OpenBriefがこれを採るとCodexのthread、approval、auth schemaを再公開することになる。逆にlocal controlをJSON-RPC化しても、一接続一request / responseの現状ではID correlationやserver requestを利用しない。
+
+したがってprotocolの見た目を統一せず、authorityとfailure modelをそろえる。詳細は[ADR 0004](../adr/0004-separate-acp-local-and-remote-transports.md)に記録した。
+
 ## 実装順
 
 ### P1: Brief data plane（実装済み）
@@ -743,9 +884,9 @@ Buzzの`KnownAcpRuntime`をそのまま移植せず、Desktopの`AcpRuntimeSpec`
 
 Hermes / OpenClaw等のcronから、同じObservationBatch ingressへGmail / Slackのread-only結果を投入する。interactive Codex sessionとschedule lifecycleを結合しない。
 
-### P5: runtime追加
+### P5: ACP runtime追加
 
-価値確認後にHermes、Claude、OpenClawの順でadapter integration testを追加する。共通UIへ押し込まず、capability差を表示する。
+価値確認後もOpenBriefが対応するAgent protocolはACPだけとする。別Agentを追加する場合はstable ACPを満たすadapterとintegration testを要求し、Hermes、OpenClaw、Codex app-server等のnative protocol clientは実装しない。共通UIへcapabilityを押し込まず、ACP initialize responseの差として表示する。
 
 ### P6: Activity source
 

@@ -8,8 +8,9 @@ use serde::Serialize;
 use time::{Date, Duration, OffsetDateTime, Time, UtcOffset};
 
 use crate::{
-    AppPaths, CollectorStatus, Config, ConfigError, ControlClient, ControlError, ControlRequest,
-    ControlResponse, PathsError, RecordingStatus, ServiceError, ServiceManager,
+    AppPaths, CollectorStatus, Config, ConfigError, ControlRequest, ControlResponse,
+    LocalControlClient, LocalControlError, PathsError, RecordingStatus, ServiceError,
+    ServiceManager,
 };
 
 #[derive(Debug, Clone)]
@@ -48,6 +49,7 @@ impl ContextService {
     pub fn status(&self) -> Result<CollectorStatus, QueryError> {
         if !self.paths.control_socket.exists() {
             return Ok(CollectorStatus {
+                control_protocol_version: openbrief_protocol::CONTROL_PROTOCOL_VERSION,
                 schema_version: 1,
                 recording: RecordingStatus::Disabled,
                 last_window_event_at: None,
@@ -57,7 +59,7 @@ impl ContextService {
         }
         match self.control(&ControlRequest::Status)? {
             ControlResponse::Status(status) => Ok(status),
-            response => Err(QueryError::UnexpectedControlResponse(response)),
+            response => Err(QueryError::UnexpectedControlResponse(Box::new(response))),
         }
     }
 
@@ -102,7 +104,7 @@ impl ContextService {
         if self.paths.control_socket.exists() {
             return match self.control(&ControlRequest::Delete { start, end })? {
                 ControlResponse::Deleted { segments } => Ok(segments),
-                response => Err(QueryError::UnexpectedControlResponse(response)),
+                response => Err(QueryError::UnexpectedControlResponse(Box::new(response))),
             };
         }
 
@@ -136,7 +138,7 @@ impl ContextService {
     }
 
     fn control(&self, request: &ControlRequest) -> Result<ControlResponse, QueryError> {
-        Ok(ControlClient::new(&self.paths.control_socket).request(request)?)
+        Ok(LocalControlClient::new(&self.paths.control_socket).request(request)?)
     }
 }
 
@@ -155,7 +157,7 @@ fn effective_query_end(
 fn expect_ok(response: ControlResponse) -> Result<(), QueryError> {
     match response {
         ControlResponse::Ok => Ok(()),
-        response => Err(QueryError::UnexpectedControlResponse(response)),
+        response => Err(QueryError::UnexpectedControlResponse(Box::new(response))),
     }
 }
 
@@ -168,7 +170,7 @@ pub enum QueryError {
     #[error(transparent)]
     Service(#[from] ServiceError),
     #[error(transparent)]
-    Control(#[from] ControlError),
+    Control(#[from] LocalControlError),
     #[error(transparent)]
     Store(#[from] openbrief_store::StoreError),
     #[error(transparent)]
@@ -176,7 +178,7 @@ pub enum QueryError {
     #[error("date has no following day")]
     DateOverflow,
     #[error("collector returned an unexpected response: {0:?}")]
-    UnexpectedControlResponse(ControlResponse),
+    UnexpectedControlResponse(Box<ControlResponse>),
 }
 
 #[cfg(test)]

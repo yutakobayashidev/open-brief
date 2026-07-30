@@ -1,0 +1,14 @@
+[package]
+name = "openbrief-client"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+openbrief-protocol = { path = "../openbrief-protocol" }
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

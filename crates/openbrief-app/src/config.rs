@@ -1,5 +1,6 @@
 use std::fs;
 use std::io;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
@@ -10,6 +11,7 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     pub capture: CaptureConfig,
     pub agent: AgentSettings,
+    pub remote: RemoteSettings,
     pub retention_days: u16,
 }
 
@@ -18,7 +20,26 @@ impl Default for Config {
         Self {
             capture: CaptureConfig::default(),
             agent: AgentSettings::default(),
+            remote: RemoteSettings::default(),
             retention_days: 7,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RemoteSettings {
+    pub enabled: bool,
+    pub bind: SocketAddr,
+    pub token_file: Option<PathBuf>,
+}
+
+impl Default for RemoteSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            bind: SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 43_117),
+            token_file: None,
         }
     }
 }
@@ -124,6 +145,15 @@ impl Config {
         {
             return Err(ConfigError::AgentPathMustBeAbsolute);
         }
+        if self.remote.enabled
+            && self
+                .remote
+                .token_file
+                .as_ref()
+                .is_none_or(|path| !path.is_absolute())
+        {
+            return Err(ConfigError::RemoteTokenPathRequired);
+        }
         Ok(())
     }
 }
@@ -157,6 +187,8 @@ pub enum ConfigError {
     AgentProviderRequired,
     #[error("agent.executable_path must be an absolute path")]
     AgentPathMustBeAbsolute,
+    #[error("remote.token_file must be an absolute path when remote access is enabled")]
+    RemoteTokenPathRequired,
 }
 
 #[cfg(test)]
@@ -177,6 +209,25 @@ mod tests {
         let settings = AgentSettings::default();
         assert_eq!(settings.provider, "codex");
         assert!(settings.executable_path.is_none());
+    }
+
+    #[test]
+    fn remote_access_is_disabled_and_loopback_only_by_default() {
+        let remote = RemoteSettings::default();
+        assert!(!remote.enabled);
+        assert!(remote.bind.ip().is_loopback());
+        assert!(remote.token_file.is_none());
+    }
+
+    #[test]
+    fn remote_access_requires_an_absolute_token_path() {
+        let mut config = Config::default();
+        config.remote.enabled = true;
+        config.remote.token_file = Some(PathBuf::from("token"));
+        assert!(matches!(
+            config.validate(),
+            Err(ConfigError::RemoteTokenPathRequired)
+        ));
     }
 
     #[test]

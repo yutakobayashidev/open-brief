@@ -116,6 +116,7 @@
           default = pkgs.mkShell {
             packages = with pkgs; [
               rustToolchain
+              flutter
               nodejs_24
               pnpm_10
               openssl

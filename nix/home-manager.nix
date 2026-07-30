@@ -69,7 +69,7 @@ in
 
     systemd.user.services.openbrief = {
       Unit = {
-        Description = "OpenBrief context collector";
+        Description = "OpenBrief local daemon";
         Documentation = [ "https://github.com/yutakobayashidev/open-brief" ];
         After = [ "graphical-session.target" ];
         PartOf = [ "graphical-session.target" ];
@@ -78,7 +78,7 @@ in
 
       Service = {
         Type = "simple";
-        ExecStart = "${lib.getExe' cfg.package "openbrief"} watch";
+        ExecStart = "${lib.getExe' cfg.package "openbriefd"}";
         Restart = "on-failure";
         RestartSec = 3;
         UMask = "0077";

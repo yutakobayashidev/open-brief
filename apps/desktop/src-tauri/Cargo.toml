@@ -17,14 +17,10 @@ path = "src/main.rs"
 tauri-build = { version = "2.5.6", features = [] }
 
 [dependencies]
-openbrief-agent = { path = "../../../crates/openbrief-agent" }
 openbrief-app = { path = "../../../crates/openbrief-app" }
-openbrief-core = { path = "../../../crates/openbrief-core" }
-serde.workspace = true
-serde_json.workspace = true
+openbrief-client = { path = "../../../crates/openbrief-client" }
+openbrief-protocol = { path = "../../../crates/openbrief-protocol" }
 tauri = { version = "2.11.5", features = [] }
-thiserror.workspace = true
-time.workspace = true
 tokio.workspace = true
 
 [features]

@@ -47,7 +47,11 @@ rustPlatform.buildRustPackage (finalAttrs: {
     "--package"
     "openbrief-agent"
     "--package"
+    "openbrief-client"
+    "--package"
     "openbrief-cli"
+    "--package"
+    "openbrief-protocol"
   ];
 
   pnpmDeps = fetchPnpmDeps {

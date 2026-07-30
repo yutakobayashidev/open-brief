@@ -26,3 +26,5 @@
 - Tauri Desktopはbuild成功やwindow生成だけで動作確認済みにしない。Nix packageからrelease binaryを実際に起動し、埋め込みfrontend、Capability ACL、sidecar process、画面上の応答まで確認する。直接`cargo build`するpackageでは`custom-protocol` featureを明示し、frontendが使うEvent権限を最小Capabilityとして宣言する。
 - OpenBriefの画面履歴と有限Briefを、一つのAI優先順位pipelineへ潰さない。画面履歴は時間盲に対するActivity Recall、Gmail等は外部情報のAttention Triage、自然言語dumpは本人意図の補正入力として意味を分ける。共有するのはObservation ingressとlocal authorityであり、それぞれの効果も別に測る。
 - `commit&push`のpush認証だけが失敗している場合でも、ユーザーが明示的に「無視してcommit」と指示したら、GitHub認証を再要求せずローカルcommitを完了する。push不能とcommit不能を同じblockerとして扱わない。
+- 新しいDesktop / Mobile transportを実装する時に、wire型とclient処理をdaemon crateや特定Appへ埋め込まない。RustではI/Oを持たないprotocol crateとtransport client crate、DartではAppから独立したclient packageを先に置き、Tauri・CLI・Flutterがdomain contractを共有できる境界を保つ。
+- Codex app-serverやBuzzを調査しても、そのprotocolや抽象化をOpenBriefへコピーしない。Agent境界はstable ACPだけを実装し、local controlとremote Mobile APIは各failure modelに合う最小transportを選ぶ。

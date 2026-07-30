@@ -5,7 +5,7 @@
 現在は次の二つを実装しています。
 
 - Linux / Wayland / niri向けmetadata-only Context Recall: foreground app IDと時刻だけをSQLiteへ保存する
-- Desktop Attention Handoff MVP: Observationを有限Briefへ変え、Codex ACPとの自然言語triageを本人確認後にだけDecision / Curiosity / Return Anchorへ確定する
+- Attention Handoff MVP: Observationを有限Briefへ変え、Codex ACPとの自然言語triageを本人確認後にだけDecision / Curiosity / Return Anchorへ確定する。Tauri DesktopとFlutter companionから同じdaemonへ接続できる
 
 window title、PID、画面、音声、Agent transcriptは保存しません。x870上のLM Studioは将来の画面VLM用であり、Brief生成はCodex等のAgentへ委任します。
 
@@ -17,7 +17,7 @@ cargo test --workspace
 cargo build --release
 
 # foregroundで安全に試す
-./target/release/openbrief watch
+./target/release/openbriefd
 
 # 別terminalから確認する
 ./target/release/openbrief status
@@ -30,9 +30,13 @@ cargo build --release
 
 # Desktopを起動する
 ./target/release/openbrief-desktop
+
+# Flutter companionを確認する
+cd apps/mobile
+flutter run
 ```
 
-継続利用する場合は、release binaryを固定した場所へ置いてから`openbrief enable`を実行する。systemd user serviceが同じbinaryのhidden `watch` commandを起動する。
+継続利用する場合は、release binaryを固定した場所へ置いてから`openbrief enable`を実行する。systemd user serviceが`openbriefd`を起動し、collector、SQLite書き込み、ACP runtimeを所有する。
 
 ```console
 openbrief enable
@@ -42,7 +46,23 @@ openbrief delete --today
 openbrief disable
 ```
 
-configは`${XDG_CONFIG_HOME:-~/.config}/openbrief/config.toml`、DBは`${XDG_DATA_HOME:-~/.local/share}/openbrief/openbrief.sqlite3`へ置く。DesktopはOpenBrief packageに固定されたCodex ACPを内部解決するため、通常はAgent pathの設定が不要です。
+configは`${XDG_CONFIG_HOME:-~/.config}/openbrief/config.toml`、DBは`${XDG_DATA_HOME:-~/.local/share}/openbrief/openbrief.sqlite3`へ置く。Desktopは既存の`openbriefd`へ接続し、未起動なら同じ`bin` directoryのdaemonをmanaged childとして起動する。Desktopが起動したdaemonだけを終了時に停止し、systemd管理のdaemonは停止しない。
+
+DesktopとCLIはUnix socketで`openbriefd`へ接続する。Desktopは起動時にcontrol protocol versionを確認し、不一致ならserviceの再起動またはupgradeを要求する。Flutter companionはTailscale Serve等でTLSを終端したHTTP / WebSocket APIへ接続する。remote APIは既定で無効かつ平文HTTPなので、loopback以外へ直接bindしない。
+
+```console
+install -m 600 /dev/null ~/.config/openbrief/device-token
+openssl rand -hex 32 > ~/.config/openbrief/device-token
+```
+
+```toml
+[remote]
+enabled = true
+bind = "127.0.0.1:43117"
+token_file = "/home/yuta/.config/openbrief/device-token"
+```
+
+外部からは`tailscale serve --bg https+insecure://127.0.0.1:43117`等でtailnet内のHTTPSへ公開し、そのURLとdevice tokenをFlutterへ入力する。自動pairingとtoken失効UIはまだ対象外です。
 
 interactive AgentはDesktopの静的ACP runtime catalogから選択する。現在の組み込みproviderは`codex`です。別buildを明示的に試す場合だけ、advanced overrideとして絶対pathを設定する。
 
@@ -59,20 +79,26 @@ DesktopからAgentへ渡すのは、最新Observation最大100件を含む64 KiB
 ## Rust workspace
 
 ```text
-openbrief-desktop      Tauri command/event adapter、静的ACP runtime catalog
-    ├─ React UI        有限Brief、Return Thread、選択中のAgent sidecar
-    └─ openbrief-agent 公式ACP SDK、process lifecycle、stream/cancel
+openbrief-desktop      Tauri command/event adapter、openbriefd managed-child
+    └─ React UI        有限Brief、Return Thread、選択中のAgent sidecar
 
 openbrief-cli          ingest、Context Recall、hidden MCP stdio server
-    └─ openbrief-app   Attention service、query、collector、systemd
+openbriefd             collector、SQLite authority、ACP runtime、event journal
+    └─ openbrief-app   Attention service、query、daemon、systemd
+       ├─ openbrief-agent       公式ACP SDK、process lifecycle、stream/cancel
+       ├─ openbrief-client      Unix socket local client
        ├─ openbrief-core         Observation / Proposal / Decision domain
+       ├─ openbrief-protocol     transport非依存のcommand / event / API wire型
        ├─ openbrief-source-niri  niri IPC adapter
        └─ openbrief-store        SQLite local authority
+
+openbrief_mobile       Flutter Attention companion
+    └─ openbrief_client          再利用可能なDart HTTP / WebSocket client
 ```
 
-Reactはshadcnのcompositionと視覚patternだけを参考にし、Vercel AI SDK、`useChat`、`@shadcn/helpers`は使いません。Rust側がAgent processとpermission境界を所有します。
+Reactはshadcnのcompositionと視覚patternだけを参考にし、Vercel AI SDK、`useChat`、`@shadcn/helpers`は使いません。`openbriefd`がAgent processとpermission境界を所有します。
 
-主な検証は`cargo test --workspace`、`cargo clippy --workspace --all-targets --all-features -- -D warnings`、`pnpm --dir apps/desktop test`、`pnpm --dir apps/desktop build`です。GC-02はActivity Recall回帰、GC-04はObservation ingressとDesktop handoff用fixtureです。
+主な検証は`cargo test --workspace`、`cargo clippy --workspace --all-targets --all-features -- -D warnings`、`pnpm --dir apps/desktop test`、`pnpm --dir apps/desktop build`、`cd apps/mobile && flutter test`です。GC-02はActivity Recall回帰、GC-04はObservation ingressとDesktop handoff用fixtureです。
 
 ## Nix flake
 
@@ -142,10 +168,12 @@ serviceは`graphical-session.target`から起動する。niriは`niri-session`�
 
 - [Design memo: OpenBrief as an Attention Control Plane](docs/architecture/attention-control-plane.md)
 - [Desktop Agent MVP](docs/architecture/desktop-agent-mvp.md)
+- [Mobile companionとremote API](docs/architecture/mobile-companion.md)
 - [ADR一覧](docs/adr/README.md)
 - [ADR 0001: Local-firstなデータ境界とModel Gateway](docs/adr/0001-adopt-local-first-data-and-model-boundaries.md)
 - [ADR 0002: Attention SignalとSlack Status Output](docs/adr/0002-adopt-attention-signals-and-slack-status-output.md)
 - [ADR 0003: Proposal-only ACP Agent boundary](docs/adr/0003-adopt-proposal-only-acp-agent-boundary.md)
+- [ADR 0004: ACP・local・remote transportの分離](docs/adr/0004-separate-acp-local-and-remote-transports.md)
 
 ## Tiimo調査レポート
 

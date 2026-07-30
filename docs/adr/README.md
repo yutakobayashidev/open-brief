@@ -17,3 +17,4 @@
 | [0001](0001-adopt-local-first-data-and-model-boundaries.md) | Accepted | local-firstなデータ境界と、ユーザーが選べるModel Gatewayを採用する |
 | [0002](0002-adopt-attention-signals-and-slack-status-output.md) | Accepted | Signal段階とSlack Status Output Adapterを採用する |
 | [0003](0003-adopt-proposal-only-acp-agent-boundary.md) | Accepted | Codex ACPとproposal-only MCPによる本人確認境界を採用する |
+| [0004](0004-separate-acp-local-and-remote-transports.md) | Accepted | ACP、local control、remote domain APIのtransportを分離する |

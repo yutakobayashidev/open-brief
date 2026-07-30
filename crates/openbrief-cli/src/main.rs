@@ -3,10 +3,11 @@ use std::process::ExitCode;
 
 use clap::{ArgAction, Args, Parser, Subcommand};
 use openbrief_app::{
-    AppPaths, AttentionService, CollectorStatus, ContextDetail, ContextService, IngestOutcome,
-    RecordingStatus, run_proposal_mcp_server, run_watch,
+    AppPaths, AttentionService, ContextDetail, ContextService, IngestOutcome,
+    run_proposal_mcp_server,
 };
 use openbrief_core::{ActivitySlice, ContextBrief, FocusState, ObservationBatch};
+use openbrief_protocol::{CollectorStatus, RecordingStatus};
 use serde::Serialize;
 use time::format_description::BorrowedFormatItem;
 use time::macros::format_description;
@@ -42,8 +43,6 @@ enum Command {
     Ingest(IngestArgs),
     #[command(hide = true)]
     Mcp(McpArgs),
-    #[command(hide = true)]
-    Watch,
 }
 
 #[derive(Debug, Args)]
@@ -132,9 +131,6 @@ fn main() -> ExitCode {
 }
 
 fn execute(cli: Cli) -> Result<(), CliError> {
-    if matches!(cli.command, Command::Watch) {
-        return run_watch().map_err(CliError::Watch);
-    }
     if let Command::Mcp(args) = &cli.command {
         return run_mcp(args);
     }
@@ -144,8 +140,8 @@ fn execute(cli: Cli) -> Result<(), CliError> {
     let service = ContextService::discover()?;
     match cli.command {
         Command::Enable => {
-            let executable = std::env::current_exe().map_err(CliError::CurrentExecutable)?;
-            let config = service.enable(&executable)?;
+            let daemon = sibling_executable("openbriefd")?;
+            let config = service.enable(&daemon)?;
             println!("Context recall enabled.");
             println!("Mode: metadata only");
             println!("Excluded apps: {}", config.capture.excluded_apps.join(", "));
@@ -211,7 +207,6 @@ fn execute(cli: Cli) -> Result<(), CliError> {
         }
         Command::Ingest(_) => unreachable!("ingest handled before context service discovery"),
         Command::Mcp(_) => unreachable!("MCP handled before path discovery"),
-        Command::Watch => unreachable!("watch handled before path discovery"),
     }
     Ok(())
 }
@@ -409,6 +404,17 @@ fn now_local() -> OffsetDateTime {
     OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc())
 }
 
+fn sibling_executable(name: &str) -> Result<std::path::PathBuf, CliError> {
+    let current = std::env::current_exe().map_err(CliError::CurrentExecutable)?;
+    let parent = current.parent().ok_or(CliError::ExecutableDirectory)?;
+    let executable = parent.join(name);
+    if executable.is_file() {
+        Ok(executable)
+    } else {
+        Err(CliError::MissingSiblingExecutable(executable))
+    }
+}
+
 #[derive(Debug, Serialize)]
 struct Envelope<T> {
     schema_version: u32,
@@ -428,8 +434,6 @@ impl<T> Envelope<T> {
 enum CliError {
     #[error(transparent)]
     Query(#[from] openbrief_app::QueryError),
-    #[error("collector failed: {0}")]
-    Watch(openbrief_app::WatchError),
     #[error("MCP server failed: {0}")]
     Mcp(openbrief_app::McpServerError),
     #[error(transparent)]
@@ -442,6 +446,10 @@ enum CliError {
     Attention(openbrief_app::AttentionError),
     #[error("could not determine current executable: {0}")]
     CurrentExecutable(std::io::Error),
+    #[error("current executable has no parent directory")]
+    ExecutableDirectory,
+    #[error("required executable is missing: {0}")]
+    MissingSiblingExecutable(std::path::PathBuf),
     #[error("invalid date: {0}")]
     Date(time::error::Parse),
     #[error("invalid time: {0}")]
@@ -505,6 +513,7 @@ mod tests {
     #[test]
     fn json_timestamps_are_rfc3339_strings() {
         let status = CollectorStatus {
+            control_protocol_version: openbrief_protocol::CONTROL_PROTOCOL_VERSION,
             schema_version: 1,
             recording: RecordingStatus::Active,
             last_window_event_at: Some(datetime!(2026-07-30 02:55:42 +09:00)),

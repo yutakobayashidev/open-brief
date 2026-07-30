@@ -71,7 +71,7 @@ fn render_unit(executable: &Path) -> Result<String, ServiceError> {
     let executable = executable.replace('\\', "\\\\").replace('"', "\\\"");
 
     Ok(format!(
-        "[Unit]\nDescription=OpenBrief context collector\nAfter=graphical-session.target\nPartOf=graphical-session.target\n\n[Service]\nType=simple\nExecStart=\"{executable}\" watch\nRestart=on-failure\nRestartSec=3\nUMask=0077\nNoNewPrivileges=true\n\n[Install]\nWantedBy=graphical-session.target\n"
+        "[Unit]\nDescription=OpenBrief local daemon\nAfter=graphical-session.target\nPartOf=graphical-session.target\n\n[Service]\nType=simple\nExecStart=\"{executable}\"\nRestart=on-failure\nRestartSec=3\nUMask=0077\nNoNewPrivileges=true\n\n[Install]\nWantedBy=graphical-session.target\n"
     ))
 }
 
@@ -109,9 +109,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn unit_runs_watch_with_restrictive_umask() {
+    fn unit_runs_daemon_with_restrictive_umask() {
         let unit = render_unit(Path::new("/tmp/open brief")).expect("render unit");
-        assert!(unit.contains("ExecStart=\"/tmp/open brief\" watch"));
+        assert!(unit.contains("ExecStart=\"/tmp/open brief\""));
+        assert!(!unit.contains(" watch"));
         assert!(unit.contains("UMask=0077"));
     }
 }

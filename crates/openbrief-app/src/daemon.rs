@@ -12,14 +12,15 @@ use openbrief_store::Store;
 use time::{Duration, OffsetDateTime};
 
 use crate::{
-    AppPaths, CollectorStatus, Config, ConfigError, ControlRequest, ControlResponse, PathsError,
-    RecordingStatus,
+    AgentHost, AgentHostRequest, AgentHostResponse, AppPaths, CollectorStatus, Config, ConfigError,
+    ControlRequest, ControlResponse, EventJournal, PathsError, RecordingStatus, RemoteServer,
+    agent_host::{apply_proposal, load_brief, load_return_thread},
     presence::{Presence, current_presence},
 };
 
 const CONTROL_MESSAGE_LIMIT: u64 = 64 * 1024;
 
-pub fn run_watch() -> Result<(), WatchError> {
+pub fn run_daemon() -> Result<(), DaemonError> {
     let paths = AppPaths::discover()?;
     let config = Config::load_or_create(&paths.config_file)?;
     prepare_runtime(&paths)?;
@@ -29,24 +30,36 @@ pub fn run_watch() -> Result<(), WatchError> {
     let (sender, receiver) = mpsc::channel();
     spawn_niri(sender.clone());
     spawn_presence(sender.clone());
-    spawn_control(&paths, sender.clone())?;
+    let journal = EventJournal::default();
+    let agent = AgentHost::spawn(paths.clone(), journal.clone());
+    spawn_control(&paths, sender.clone(), agent.clone(), journal.clone())?;
+    let mut remote = RemoteServer::start(
+        &config.remote,
+        paths.database_file.clone(),
+        agent.clone(),
+        journal,
+    )?;
     let signal_sender = sender;
     ctrlc::set_handler(move || {
-        let _ = signal_sender.send(WatchMessage::Shutdown);
+        let _ = signal_sender.send(DaemonMessage::Shutdown);
     })
-    .map_err(WatchError::Signal)?;
+    .map_err(DaemonError::Signal)?;
 
-    let result = watch_loop(&config, &mut store, &receiver);
+    let result = daemon_loop(&config, &mut store, &receiver);
+    if let Some(remote) = remote.as_mut() {
+        remote.stop();
+    }
+    let _ = agent.request(AgentHostRequest::Shutdown);
     let _ = fs::remove_file(&paths.control_socket);
     result
 }
 
 #[allow(clippy::too_many_lines)]
-fn watch_loop(
+fn daemon_loop(
     config: &Config,
     store: &mut Store,
-    receiver: &Receiver<WatchMessage>,
-) -> Result<(), WatchError> {
+    receiver: &Receiver<DaemonMessage>,
+) -> Result<(), DaemonError> {
     let mut recording = RecordingStatus::Active;
     let mut paused_until = None;
     let mut source_available = false;
@@ -83,7 +96,7 @@ fn watch_loop(
             continue;
         };
         match message {
-            WatchMessage::Focus(change) => {
+            DaemonMessage::Focus(change) => {
                 source_available = true;
                 last_window_event_at = Some(at);
                 last_focus = Some(change);
@@ -96,7 +109,7 @@ fn watch_loop(
                 append_state(store, at, state, app_id)?;
                 last_transition_at = at;
             }
-            WatchMessage::SourceUnavailable => {
+            DaemonMessage::SourceUnavailable => {
                 let was_available = source_available;
                 source_available = false;
                 if was_available
@@ -107,7 +120,7 @@ fn watch_loop(
                     last_transition_at = at;
                 }
             }
-            WatchMessage::Presence(next) => {
+            DaemonMessage::Presence(next) => {
                 if next == presence {
                     continue;
                 }
@@ -132,9 +145,10 @@ fn watch_loop(
                 append_state(store, at, state, app_id)?;
                 last_transition_at = at;
             }
-            WatchMessage::Control(request, response) => {
+            DaemonMessage::Control(request, response) => {
                 let reply = match request {
                     ControlRequest::Status => ControlResponse::Status(CollectorStatus {
+                        control_protocol_version: openbrief_protocol::CONTROL_PROTOCOL_VERSION,
                         schema_version: 1,
                         recording,
                         last_window_event_at,
@@ -196,10 +210,14 @@ fn watch_loop(
                         let _ = response.send(ControlResponse::Ok);
                         return Ok(());
                     }
+                    _ => ControlResponse::Error {
+                        code: "invalid_collector_request".into(),
+                        message: "request was routed to the collector incorrectly".into(),
+                    },
                 };
                 let _ = response.send(reply);
             }
-            WatchMessage::Shutdown => {
+            DaemonMessage::Shutdown => {
                 let _ = store.close_current_segment(at);
                 return Ok(());
             }
@@ -212,7 +230,7 @@ fn append_state(
     at: OffsetDateTime,
     state: FocusState,
     app_id: Option<String>,
-) -> Result<(), WatchError> {
+) -> Result<(), DaemonError> {
     let transition = FocusTransition::new(at, state, app_id)?;
     store.append_transition(&transition)?;
     Ok(())
@@ -240,26 +258,26 @@ fn retention_duration(config: &Config) -> Duration {
     Duration::days(i64::from(config.retention_days))
 }
 
-fn spawn_niri(sender: Sender<WatchMessage>) {
+fn spawn_niri(sender: Sender<DaemonMessage>) {
     thread::spawn(move || {
         loop {
             match NiriEventSource::connect() {
                 Ok(mut source) => loop {
                     match source.next_focus_change() {
                         Ok(Some(change)) => {
-                            if sender.send(WatchMessage::Focus(change)).is_err() {
+                            if sender.send(DaemonMessage::Focus(change)).is_err() {
                                 return;
                             }
                         }
                         Ok(None) => {}
                         Err(_) => {
-                            let _ = sender.send(WatchMessage::SourceUnavailable);
+                            let _ = sender.send(DaemonMessage::SourceUnavailable);
                             break;
                         }
                     }
                 },
                 Err(_) => {
-                    if sender.send(WatchMessage::SourceUnavailable).is_err() {
+                    if sender.send(DaemonMessage::SourceUnavailable).is_err() {
                         return;
                     }
                 }
@@ -269,13 +287,13 @@ fn spawn_niri(sender: Sender<WatchMessage>) {
     });
 }
 
-fn spawn_presence(sender: Sender<WatchMessage>) {
+fn spawn_presence(sender: Sender<DaemonMessage>) {
     thread::spawn(move || {
         let mut previous = None;
         loop {
             let presence = current_presence();
             if previous != Some(presence) {
-                if sender.send(WatchMessage::Presence(presence)).is_err() {
+                if sender.send(DaemonMessage::Presence(presence)).is_err() {
                     return;
                 }
                 previous = Some(presence);
@@ -285,24 +303,45 @@ fn spawn_presence(sender: Sender<WatchMessage>) {
     });
 }
 
-fn spawn_control(paths: &AppPaths, sender: Sender<WatchMessage>) -> Result<(), WatchError> {
+fn spawn_control(
+    paths: &AppPaths,
+    sender: Sender<DaemonMessage>,
+    agent: AgentHost,
+    journal: EventJournal,
+) -> Result<(), DaemonError> {
     if paths.control_socket.exists() {
+        if UnixStream::connect(&paths.control_socket).is_ok() {
+            return Err(DaemonError::AlreadyRunning(paths.control_socket.clone()));
+        }
         fs::remove_file(&paths.control_socket)?;
     }
     let listener = UnixListener::bind(&paths.control_socket)?;
     fs::set_permissions(&paths.control_socket, fs::Permissions::from_mode(0o600))?;
+    let database_file = paths.database_file.clone();
     thread::spawn(move || {
         for stream in listener.incoming() {
             let Ok(stream) = stream else {
                 continue;
             };
-            handle_control_stream(stream, &sender);
+            let sender = sender.clone();
+            let agent = agent.clone();
+            let journal = journal.clone();
+            let database_file = database_file.clone();
+            thread::spawn(move || {
+                handle_control_stream(stream, &sender, &agent, &journal, &database_file);
+            });
         }
     });
     Ok(())
 }
 
-fn handle_control_stream(mut stream: UnixStream, sender: &Sender<WatchMessage>) {
+fn handle_control_stream(
+    mut stream: UnixStream,
+    sender: &Sender<DaemonMessage>,
+    agent: &AgentHost,
+    journal: &EventJournal,
+    database_file: &std::path::Path,
+) {
     let request = {
         let mut reader = BufReader::new(&mut stream).take(CONTROL_MESSAGE_LIMIT);
         let mut bytes = Vec::new();
@@ -312,10 +351,10 @@ fn handle_control_stream(mut stream: UnixStream, sender: &Sender<WatchMessage>) 
         serde_json::from_slice::<ControlRequest>(&bytes)
     };
     let response = match request {
-        Ok(request) => {
+        Ok(request) if is_collector_request(&request) => {
             let (reply_sender, reply_receiver) = mpsc::channel();
             if sender
-                .send(WatchMessage::Control(request, reply_sender))
+                .send(DaemonMessage::Control(request, reply_sender))
                 .is_err()
             {
                 ControlResponse::Error {
@@ -331,6 +370,7 @@ fn handle_control_stream(mut stream: UnixStream, sender: &Sender<WatchMessage>) 
                     })
             }
         }
+        Ok(request) => handle_application_request(request, agent, journal, database_file),
         Err(error) => ControlResponse::Error {
             code: "invalid_request".into(),
             message: error.to_string(),
@@ -340,7 +380,80 @@ fn handle_control_stream(mut stream: UnixStream, sender: &Sender<WatchMessage>) 
     let _ = stream.write_all(b"\n");
 }
 
-fn prepare_runtime(paths: &AppPaths) -> Result<(), WatchError> {
+fn is_collector_request(request: &ControlRequest) -> bool {
+    matches!(
+        request,
+        ControlRequest::Status
+            | ControlRequest::Pause { .. }
+            | ControlRequest::Resume
+            | ControlRequest::Delete { .. }
+            | ControlRequest::Shutdown
+    )
+}
+
+fn handle_application_request(
+    request: ControlRequest,
+    agent: &AgentHost,
+    journal: &EventJournal,
+    database_file: &std::path::Path,
+) -> ControlResponse {
+    let result = match request {
+        ControlRequest::LoadBrief => load_brief(database_file).map(ControlResponse::Brief),
+        ControlRequest::LoadReturnThread => {
+            load_return_thread(database_file).map(ControlResponse::ReturnThread)
+        }
+        ControlRequest::ApplyProposal { proposal_id } => {
+            apply_proposal(database_file, &proposal_id).map(|proposal| {
+                journal.push(crate::DaemonEvent::ProposalApplied {
+                    proposal: proposal.clone(),
+                });
+                ControlResponse::Proposal(proposal)
+            })
+        }
+        ControlRequest::AgentStatus => map_agent_response(agent.request(AgentHostRequest::Status)),
+        ControlRequest::AgentStart => map_agent_response(agent.request(AgentHostRequest::Start)),
+        ControlRequest::AgentAuthenticate { method_id } => {
+            map_agent_response(agent.request(AgentHostRequest::Authenticate { method_id }))
+        }
+        ControlRequest::AgentPrompt { text } => {
+            map_agent_response(agent.request(AgentHostRequest::Prompt { text }))
+        }
+        ControlRequest::AgentCancel => map_agent_response(agent.request(AgentHostRequest::Cancel)),
+        ControlRequest::AgentStop => map_agent_response(agent.request(AgentHostRequest::Stop)),
+        ControlRequest::EventCursor => Ok(ControlResponse::EventCursor {
+            next_sequence: journal.cursor(),
+        }),
+        ControlRequest::Events { after } => {
+            let (events, next_sequence) = journal.after(after);
+            Ok(ControlResponse::Events {
+                events,
+                next_sequence,
+            })
+        }
+        ControlRequest::Status
+        | ControlRequest::Pause { .. }
+        | ControlRequest::Resume
+        | ControlRequest::Delete { .. }
+        | ControlRequest::Shutdown => Err("collector request was routed incorrectly".to_owned()),
+    };
+    result.unwrap_or_else(|message| ControlResponse::Error {
+        code: "application_error".into(),
+        message,
+    })
+}
+
+fn map_agent_response(
+    response: Result<AgentHostResponse, crate::agent_host::AgentHostError>,
+) -> Result<ControlResponse, String> {
+    response
+        .map(|response| match response {
+            AgentHostResponse::Status(status) => ControlResponse::AgentStatus(status),
+            AgentHostResponse::TurnStarted { .. } | AgentHostResponse::Ok => ControlResponse::Ok,
+        })
+        .map_err(|error| error.to_string())
+}
+
+fn prepare_runtime(paths: &AppPaths) -> Result<(), DaemonError> {
     fs::create_dir_all(&paths.runtime_dir)?;
     fs::set_permissions(&paths.runtime_dir, fs::Permissions::from_mode(0o700))?;
     Ok(())
@@ -358,7 +471,7 @@ fn strictly_after(value: OffsetDateTime, previous: OffsetDateTime) -> OffsetDate
     }
 }
 
-enum WatchMessage {
+enum DaemonMessage {
     Focus(NiriFocusChange),
     SourceUnavailable,
     Presence(Presence),
@@ -367,7 +480,7 @@ enum WatchMessage {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum WatchError {
+pub enum DaemonError {
     #[error(transparent)]
     Paths(#[from] PathsError),
     #[error(transparent)]
@@ -378,8 +491,12 @@ pub enum WatchError {
     Core(#[from] openbrief_core::CoreError),
     #[error("runtime I/O failed: {0}")]
     Io(#[from] std::io::Error),
+    #[error("OpenBrief daemon is already running at {0}")]
+    AlreadyRunning(std::path::PathBuf),
     #[error("could not install signal handler: {0}")]
     Signal(ctrlc::Error),
+    #[error(transparent)]
+    Remote(#[from] crate::remote::RemoteError),
 }
 
 #[cfg(test)]

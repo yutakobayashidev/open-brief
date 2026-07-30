@@ -56,7 +56,7 @@ assert evaluated.config.home.packages == [ package ];
 assert service.Unit.After == [ "graphical-session.target" ];
 assert service.Unit.PartOf == [ "graphical-session.target" ];
 assert service.Unit.X-Restart-Triggers == [ configSource ];
-assert service.Service.ExecStart == "${lib.getExe' package "openbrief"} watch";
+assert service.Service.ExecStart == "${lib.getExe' package "openbriefd"}";
 assert service.Service.UMask == "0077";
 assert service.Service.NoNewPrivileges;
 assert service.Install.WantedBy == [ "graphical-session.target" ];
