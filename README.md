@@ -1,10 +1,15 @@
 # OpenBrief
 
-入力を要求せず「いつ何をしていたか」を思い出せる、local-firstなContext Recall CLIです。認知科学・HCI研究、既存製品の解析、OSS調査も同じリポジトリに残しています。
+「何を見ていたか」だけで終わらず、いま守ること、有限に探索すること、元の作業へ戻る糸を残すlocal-firstなAttention Handoffです。認知科学・HCI研究、既存製品の解析、OSS調査も同じリポジトリに残しています。
 
-現在はLinux / Wayland / niri向けのmetadata-only R0を実装しています。foreground app IDと時刻だけを7日間SQLiteへ保存し、window title、PID、画面、音声、agent transcriptは取得しません。画面captureとx870上のLM Studio連携は、R0を実際に使って価値とprivacyを確認した後のR1です。
+現在は次の二つを実装しています。
 
-## Try the R0
+- Linux / Wayland / niri向けmetadata-only Context Recall: foreground app IDと時刻だけをSQLiteへ保存する
+- Desktop Attention Handoff MVP: Observationを有限Briefへ変え、Codex ACPとの自然言語triageを本人確認後にだけDecision / Curiosity / Return Anchorへ確定する
+
+window title、PID、画面、音声、Agent transcriptは保存しません。x870上のLM Studioは将来の画面VLM用であり、Brief生成はCodex等のAgentへ委任します。
+
+## Try it
 
 ```console
 nix develop
@@ -19,6 +24,12 @@ cargo build --release
 ./target/release/openbrief recent
 ./target/release/openbrief today
 ./target/release/openbrief around 14:00
+
+# ObservationBatchを投入する
+./target/release/openbrief ingest tests/fixtures/gc-04-observation-batch.json
+
+# Desktopを起動する
+./target/release/openbrief-desktop
 ```
 
 継続利用する場合は、release binaryを固定した場所へ置いてから`openbrief enable`を実行する。systemd user serviceが同じbinaryのhidden `watch` commandを起動する。
@@ -31,19 +42,37 @@ openbrief delete --today
 openbrief disable
 ```
 
-configは`${XDG_CONFIG_HOME:-~/.config}/openbrief/config.toml`、DBは`${XDG_DATA_HOME:-~/.local/share}/openbrief/openbrief.sqlite3`へ置く。既定denylistは1Password、Signal、Discord。`delete`はTTY確認が必要で、非対話では`--force --no-input`を両方要求する。
+configは`${XDG_CONFIG_HOME:-~/.config}/openbrief/config.toml`、DBは`${XDG_DATA_HOME:-~/.local/share}/openbrief/openbrief.sqlite3`へ置く。DesktopはOpenBrief packageに固定されたCodex ACPを内部解決するため、通常はAgent pathの設定が不要です。
+
+interactive AgentはDesktopの静的ACP runtime catalogから選択する。現在の組み込みproviderは`codex`です。別buildを明示的に試す場合だけ、advanced overrideとして絶対pathを設定する。
+
+```toml
+[agent]
+provider = "codex"
+executable_path = "/absolute/path/to/codex-acp"
+```
+
+既定denylistは1Password、Signal、Discord。`delete`はTTY確認が必要で、非対話では`--force --no-input`を両方要求する。
+
+DesktopからAgentへ渡すのは、最新Observation最大100件を含む64 KiB以下のbounded snapshotです。MCPは`brief_propose`と`triage_propose`だけを公開し、Agentは本人のDecisionやReturn Anchorを直接確定できません。Codexが利用するmodel/providerへの送信は`codex-acp`側の設定に従うため、機密Observationを投入する前に確認してください。
 
 ## Rust workspace
 
 ```text
-openbrief-cli          CLI、human / JSON output
-    └─ openbrief-app   query、collector、systemd、privacy control
-       ├─ openbrief-core         stateと15分projection
+openbrief-desktop      Tauri command/event adapter、静的ACP runtime catalog
+    ├─ React UI        有限Brief、Return Thread、選択中のAgent sidecar
+    └─ openbrief-agent 公式ACP SDK、process lifecycle、stream/cancel
+
+openbrief-cli          ingest、Context Recall、hidden MCP stdio server
+    └─ openbrief-app   Attention service、query、collector、systemd
+       ├─ openbrief-core         Observation / Proposal / Decision domain
        ├─ openbrief-source-niri  niri IPC adapter
-       └─ openbrief-store        SQLite authority
+       └─ openbrief-store        SQLite local authority
 ```
 
-R0の主な検証は`cargo test --workspace`と`cargo clippy --workspace --all-targets --all-features -- -D warnings`。GC-02 fixtureを、focus event → SQLite → 15分ActivitySliceの統合テストとして実行する。
+Reactはshadcnのcompositionと視覚patternだけを参考にし、Vercel AI SDK、`useChat`、`@shadcn/helpers`は使いません。Rust側がAgent processとpermission境界を所有します。
+
+主な検証は`cargo test --workspace`、`cargo clippy --workspace --all-targets --all-features -- -D warnings`、`pnpm --dir apps/desktop test`、`pnpm --dir apps/desktop build`です。GC-02はActivity Recall回帰、GC-04はObservation ingressとDesktop handoff用fixtureです。
 
 ## Nix flake
 
@@ -59,7 +88,9 @@ nix run .# -- --help
 ```text
 packages.<system>.default
 packages.<system>.openbrief
+packages.<system>.openbrief-codex-acp
 apps.<system>.default
+apps.<system>.desktop
 overlays.default
 homeManagerModules.default
 homeManagerModules.openbrief
@@ -112,6 +143,7 @@ serviceは`graphical-session.target`から起動する。niriは`niri-session`�
 - [ADR一覧](docs/adr/README.md)
 - [ADR 0001: Local-firstなデータ境界とModel Gateway](docs/adr/0001-adopt-local-first-data-and-model-boundaries.md)
 - [ADR 0002: Attention SignalとSlack Status Output](docs/adr/0002-adopt-attention-signals-and-slack-status-output.md)
+- [ADR 0003: Proposal-only ACP Agent boundary](docs/adr/0003-adopt-proposal-only-acp-agent-boundary.md)
 
 ## Tiimo調査レポート
 
@@ -158,6 +190,7 @@ serviceは`graphical-session.target`から起動する。niriは`niri-session`�
 - [GC-01実装fixture](fixtures/golden-cases/gc-01-gmail-rss-return.json)
 - [GC-02 Activity Recall fixture](fixtures/golden-cases/gc-02-activity-recall-timeline.json)
 - [GC-03 Activity Recall fail-closed fixture](fixtures/golden-cases/gc-03-activity-recall-fail-closed.json)
+- [GC-04 Desktop Attention Handoff fixture](tests/fixtures/gc-04-observation-batch.json)
 - [評価プロトコル](docs/research/attention-triage/04-study-protocol.md)
 
 ## OSS implementation references

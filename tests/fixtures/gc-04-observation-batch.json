@@ -1,0 +1,51 @@
+{
+  "id": "gc-04-batch-2026-07-30",
+  "producer": "gc-04-fixture",
+  "generated_at": "2026-07-30T12:31:00+09:00",
+  "source_coverage": [
+    {
+      "source": "gmail",
+      "status": "ready",
+      "last_synced_at": "2026-07-30T12:27:00+09:00",
+      "raw_item_count": 1,
+      "observation_count": 1,
+      "omitted_item_count": 0
+    },
+    {
+      "source": "rss",
+      "status": "ready",
+      "last_synced_at": "2026-07-30T12:25:00+09:00",
+      "raw_item_count": 1,
+      "observation_count": 1,
+      "omitted_item_count": 0
+    }
+  ],
+  "observations": [
+    {
+      "id": "gc-04-mail-thursday",
+      "source": "gmail",
+      "kind": "direct_question",
+      "occurred_at": "2026-07-30T12:27:00+09:00",
+      "summary": "木曜の打ち合わせ時間について、先方が今日中の返答を待っている",
+      "facts": [
+        "ユーザーが直接の宛先である",
+        "返信期限は今日中である"
+      ],
+      "source_ref": "fixture:gmail:mail-thursday",
+      "content_trust": "untrusted"
+    },
+    {
+      "id": "gc-04-memory-article",
+      "source": "rss",
+      "kind": "article",
+      "occurred_at": "2026-07-30T12:25:00+09:00",
+      "summary": "Agent memoryの記事に、現在の認証設計へ使えそうな実装例がある",
+      "facts": [
+        "推定読了時間は8分",
+        "外部への返信は不要である"
+      ],
+      "source_ref": "fixture:rss:memory-article",
+      "content_trust": "untrusted"
+    }
+  ]
+}

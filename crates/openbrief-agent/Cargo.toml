@@ -1,0 +1,16 @@
+[package]
+name = "openbrief-agent"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+agent-client-protocol.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

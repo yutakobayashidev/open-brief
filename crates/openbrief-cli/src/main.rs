@@ -1,9 +1,12 @@
-use std::io::{self, IsTerminal, Write};
+use std::io::{self, IsTerminal, Read, Write};
 use std::process::ExitCode;
 
 use clap::{ArgAction, Args, Parser, Subcommand};
-use openbrief_app::{CollectorStatus, ContextDetail, ContextService, RecordingStatus, run_watch};
-use openbrief_core::{ActivitySlice, ContextBrief, FocusState};
+use openbrief_app::{
+    AppPaths, AttentionService, CollectorStatus, ContextDetail, ContextService, IngestOutcome,
+    RecordingStatus, run_proposal_mcp_server, run_watch,
+};
+use openbrief_core::{ActivitySlice, ContextBrief, FocusState, ObservationBatch};
 use serde::Serialize;
 use time::format_description::BorrowedFormatItem;
 use time::macros::format_description;
@@ -36,6 +39,9 @@ enum Command {
     Pause(PauseArgs),
     Resume,
     Delete(DeleteArgs),
+    Ingest(IngestArgs),
+    #[command(hide = true)]
+    Mcp(McpArgs),
     #[command(hide = true)]
     Watch,
 }
@@ -91,6 +97,29 @@ struct DeleteArgs {
     no_input: bool,
 }
 
+#[derive(Debug, Args)]
+struct IngestArgs {
+    /// `ObservationBatch` JSON file. Reads stdin when omitted.
+    file: Option<std::path::PathBuf>,
+}
+
+#[derive(Debug, Args)]
+struct McpArgs {
+    #[command(subcommand)]
+    command: McpCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum McpCommand {
+    Serve(McpServeArgs),
+}
+
+#[derive(Debug, Args)]
+struct McpServeArgs {
+    #[arg(long)]
+    database: Option<std::path::PathBuf>,
+}
+
 fn main() -> ExitCode {
     let cli = Cli::parse();
     match execute(cli) {
@@ -105,6 +134,12 @@ fn main() -> ExitCode {
 fn execute(cli: Cli) -> Result<(), CliError> {
     if matches!(cli.command, Command::Watch) {
         return run_watch().map_err(CliError::Watch);
+    }
+    if let Command::Mcp(args) = &cli.command {
+        return run_mcp(args);
+    }
+    if let Command::Ingest(args) = &cli.command {
+        return run_ingest(args);
     }
     let service = ContextService::discover()?;
     match cli.command {
@@ -174,7 +209,48 @@ fn execute(cli: Cli) -> Result<(), CliError> {
             let deleted = service.delete_date(date, now.offset())?;
             println!("Deleted {deleted} context segments for {date}.");
         }
+        Command::Ingest(_) => unreachable!("ingest handled before context service discovery"),
+        Command::Mcp(_) => unreachable!("MCP handled before path discovery"),
         Command::Watch => unreachable!("watch handled before path discovery"),
+    }
+    Ok(())
+}
+
+fn run_mcp(args: &McpArgs) -> Result<(), CliError> {
+    match &args.command {
+        McpCommand::Serve(args) => {
+            let database = args
+                .database
+                .clone()
+                .map_or_else(|| AppPaths::discover().map(|paths| paths.database_file), Ok)?;
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .map_err(CliError::Runtime)?
+                .block_on(run_proposal_mcp_server(database))
+                .map_err(CliError::Mcp)
+        }
+    }
+}
+
+fn run_ingest(args: &IngestArgs) -> Result<(), CliError> {
+    let mut raw = String::new();
+    if let Some(file) = &args.file {
+        raw = std::fs::read_to_string(file).map_err(CliError::Input)?;
+    } else {
+        io::stdin()
+            .read_to_string(&mut raw)
+            .map_err(CliError::Input)?;
+    }
+    let batch: ObservationBatch = serde_json::from_str(&raw).map_err(CliError::Json)?;
+    let paths = AppPaths::discover()?;
+    let mut service = AttentionService::open(paths.database_file).map_err(CliError::Attention)?;
+    let outcome = service.ingest(&batch).map_err(CliError::Attention)?;
+    match outcome {
+        IngestOutcome::Inserted => println!("Ingested ObservationBatch {}.", batch.id),
+        IngestOutcome::AlreadyPresent => {
+            println!("ObservationBatch {} was already present.", batch.id);
+        }
     }
     Ok(())
 }
@@ -354,6 +430,16 @@ enum CliError {
     Query(#[from] openbrief_app::QueryError),
     #[error("collector failed: {0}")]
     Watch(openbrief_app::WatchError),
+    #[error("MCP server failed: {0}")]
+    Mcp(openbrief_app::McpServerError),
+    #[error(transparent)]
+    Paths(#[from] openbrief_app::PathsError),
+    #[error("could not create async runtime: {0}")]
+    Runtime(std::io::Error),
+    #[error("could not read input: {0}")]
+    Input(std::io::Error),
+    #[error("attention store failed: {0}")]
+    Attention(openbrief_app::AttentionError),
     #[error("could not determine current executable: {0}")]
     CurrentExecutable(std::io::Error),
     #[error("invalid date: {0}")]
@@ -394,6 +480,15 @@ mod tests {
         Cli::try_parse_from(["openbrief", "recent", "--minutes", "20"]).unwrap();
         Cli::try_parse_from(["openbrief", "around", "14:00", "--json"]).unwrap();
         Cli::try_parse_from(["openbrief", "today", "--date", "2026-07-29"]).unwrap();
+        Cli::try_parse_from([
+            "openbrief",
+            "mcp",
+            "serve",
+            "--database",
+            "/tmp/openbrief.sqlite3",
+        ])
+        .unwrap();
+        Cli::try_parse_from(["openbrief", "ingest", "observations.json"]).unwrap();
     }
 
     #[test]

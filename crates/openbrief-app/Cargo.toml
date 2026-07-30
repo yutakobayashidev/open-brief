@@ -11,10 +11,13 @@ directories.workspace = true
 openbrief-core = { path = "../openbrief-core" }
 openbrief-source-niri = { path = "../openbrief-source-niri" }
 openbrief-store = { path = "../openbrief-store" }
+rmcp.workspace = true
+schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 time.workspace = true
+tokio.workspace = true
 toml.workspace = true
 
 [lints]

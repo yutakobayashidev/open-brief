@@ -1,7 +1,7 @@
 use std::fs;
 use std::io;
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct Config {
     pub capture: CaptureConfig,
+    pub agent: AgentSettings,
     pub retention_days: u16,
 }
 
@@ -16,7 +17,28 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             capture: CaptureConfig::default(),
+            agent: AgentSettings::default(),
             retention_days: 7,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AgentSettings {
+    /// ACP runtime selected from the Desktop runtime catalog.
+    pub provider: String,
+    /// Optional explicit path to a custom ACP adapter. The packaged version
+    /// for the selected provider is used when this is absent.
+    #[serde(alias = "codex_acp_path")]
+    pub executable_path: Option<PathBuf>,
+}
+
+impl Default for AgentSettings {
+    fn default() -> Self {
+        Self {
+            provider: "codex".to_owned(),
+            executable_path: None,
         }
     }
 }
@@ -58,6 +80,7 @@ impl Config {
     pub fn load(path: &Path) -> Result<Self, ConfigError> {
         let raw = fs::read_to_string(path).map_err(ConfigError::Read)?;
         let mut config: Self = toml::from_str(&raw).map_err(ConfigError::Parse)?;
+        config.agent.provider = config.agent.provider.trim().to_ascii_lowercase();
         config.validate()?;
         config.capture.excluded_apps = normalize_apps(config.capture.excluded_apps);
         Ok(config)
@@ -90,6 +113,17 @@ impl Config {
         if self.retention_days == 0 || self.retention_days > 30 {
             return Err(ConfigError::InvalidRetention(self.retention_days));
         }
+        if self.agent.provider.trim().is_empty() {
+            return Err(ConfigError::AgentProviderRequired);
+        }
+        if self
+            .agent
+            .executable_path
+            .as_ref()
+            .is_some_and(|path| !path.is_absolute())
+        {
+            return Err(ConfigError::AgentPathMustBeAbsolute);
+        }
         Ok(())
     }
 }
@@ -119,6 +153,10 @@ pub enum ConfigError {
     InvalidPath,
     #[error("retention_days must be between 1 and 30, got {0}")]
     InvalidRetention(u16),
+    #[error("agent.provider must not be empty")]
+    AgentProviderRequired,
+    #[error("agent.executable_path must be an absolute path")]
+    AgentPathMustBeAbsolute,
 }
 
 #[cfg(test)]
@@ -132,5 +170,29 @@ mod tests {
         assert!(config.is_excluded("Discord"));
         assert!(config.is_excluded("dev.vencord.Vesktop"));
         assert!(!config.is_excluded("firefox"));
+    }
+
+    #[test]
+    fn agent_defaults_to_packaged_codex_provider() {
+        let settings = AgentSettings::default();
+        assert_eq!(settings.provider, "codex");
+        assert!(settings.executable_path.is_none());
+    }
+
+    #[test]
+    fn legacy_codex_path_deserializes_as_the_generic_override() {
+        let config: Config = toml::from_str(
+            r#"
+            [agent]
+            codex_acp_path = "/opt/codex-acp"
+            "#,
+        )
+        .expect("legacy field should remain a free serde alias");
+
+        assert_eq!(config.agent.provider, "codex");
+        assert_eq!(
+            config.agent.executable_path,
+            Some(PathBuf::from("/opt/codex-acp"))
+        );
     }
 }

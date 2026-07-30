@@ -3,6 +3,14 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
 
+mod attention;
+
+pub use attention::{
+    BriefDisposition, BriefItem, BriefProposal, ContentTrust, CuriosityCapture, Observation,
+    ObservationBatch, ProposedCuriosityCapture, ProposedDecision, ProposedReturnAnchor,
+    ReturnAnchor, SourceCoverage, SourceStatus, TriageConfirmation, TriageProposal, UserDecision,
+};
+
 const ACTIVITY_BUCKET_SECONDS: i64 = 15 * 60;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -260,6 +268,16 @@ pub enum CoreError {
     },
     #[error("duration cannot be negative or exceed u64 seconds")]
     InvalidDuration,
+    #[error("{0} must not be empty")]
+    EmptyField(&'static str),
+    #[error("{entity} id is duplicated: {id}")]
+    DuplicateId { entity: &'static str, id: String },
+    #[error("brief must contain between 1 and {max} items, got {count}")]
+    InvalidBriefItemCount { count: usize, max: usize },
+    #[error("proposal item {item_id} must cite at least one observation")]
+    MissingEvidence { item_id: String },
+    #[error("explore item {item_id} must have positive exploration_minutes")]
+    InvalidExplorationMinutes { item_id: String },
 }
 
 pub fn reduce_focus_transitions(

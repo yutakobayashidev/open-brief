@@ -14,3 +14,13 @@
 - 時間盲を支援するtoolへ、毎回のgoal入力、agent command wrapper、windowごとの許可を必須にしない。開発中のmulti-window移動と要件未定の探索を通常状態として、one-time denylistと即時pauseを備えたambient観測から「いつ何をしていたか」を自動で返し、goalとmanual markは任意の補助情報にする。
 - repository全体の構想を尋ねられた時に、直近のMVPをproject全体の目的へ縮約しない。README、ADR、research、reverse-engineering、golden case、git historyを横断し、North Star、現在のwedge、後続projection、保留・No-Goを分けて説明する。
 - 同じOSSを実装候補として繰り返し参照する場合、毎回mainを再調査しない。確認したcommit、license、重要source path、採用・非採用、再調査条件をimplementation referenceへ固定する。
+- Activity Recallの価値検証を優先するあまり、ACP、Hermes、OpenClawを後回しのUI統合へ縮約しない。OpenBriefがsource credential、収集cron、外部actionを抱え込まないため、Agent ingress、interactive ACP、OpenBrief MCP / CLI、Model Gatewayの交換可能な推論境界もprojectの中核として同じvertical sliceで評価する。
+- LM Studioを汎用Brief生成器と決めつけない。有限Briefの生成・トリアージはHermes / OpenClaw等のAgentがsource取得やtool利用を含めて担い、LM StudioのOpenAI互換APIは画面keyframeを構造化Observationへ変換するVLM境界として扱う。Agent推論とVLM観測は別contractにする。
+- 最初のAgent runtimeをHermesに固定しない。Hermesの実行にSSHや別host設定が必要で導入摩擦が高い場合、手元で認証済みのCodex ACPをinteractive reasonerへ使い、scheduled collectionはfixture・手動ingress・後続のsystemd timer等へ分離する。cron能力をACP runtime選定の必須条件にしない。
+- shadcnのAI chat例を参照することを、Vercel AI SDKや`@shadcn/helpers`の採用要求へ拡大しない。OpenBrief DesktopではMessage、Scroller、tool/proposal card等のUI patternだけを参考にし、ACP streamはTauri typed eventからReact stateへ直接反映する。不要なchat transport abstractionを導入しない。
+- 実装riskを減らすためにDesktopを自動的にMVP後へ送らない。ユーザーがTauri DesktopでBrief、Agent対話、proposal確認、Returnを一画面に統合したい場合、その低摩擦な体験自体を検証対象に含め、CLIはdebug・ingress・service controlへ限定する。
+- Agent間で状態を共有できるという設計上の利点だけで、独立したOpenBrief appの必要性を前提にしない。Hermes / Codexへskillとlocal fileを追加する直接構成を第一comparatorに置き、有限化、復帰、provenance、選択的開示に測定可能な追加効果がなければ、OpenBriefをthin CLI / protocolへ縮小または統合する判断を残す。
+- Hermes連携を抽象的な「後続scheduled producer」で済ませない。想定する具体flowは、Hermes cronが`gog` CLIやSlack CLIをread-onlyで実行し、結果をObservationBatchへ正規化して`openbrief ingest`へ書き込むこと。HermesにSQLiteを直接触らせず、sourceへのwrite actionとも分離する。
+- Agent runtimeの安全性を理由に、利用者へadapterの手動installと絶対path設定をそのまま要求しない。Nix packageやDesktop releaseへversion固定・hash検証済みのACP adapterを同梱し、sibling pathを内部解決することは、runtime downloadやPATH探索とは異なる。設定はcustom runtime用overrideにし、readinessはcommand responseで確実に表示する。
+- frontend package managerを、既に環境へ入っているという理由だけでBunへ固定しない。ユーザーがpnpmを希望するprojectでは、Tauri hook、lockfile、Nix dependency fetch、README、dev shellをpnpmへ統一する。upstream packageの再現buildがpackage-lockを要求する場合だけ、その外部package境界ではnpmを残す。
+- Tauri Desktopはbuild成功やwindow生成だけで動作確認済みにしない。Nix packageからrelease binaryを実際に起動し、埋め込みfrontend、Capability ACL、sidecar process、画面上の応答まで確認する。直接`cargo build`するpackageでは`custom-protocol` featureを明示し、frontendが使うEvent権限を最小Capabilityとして宣言する。

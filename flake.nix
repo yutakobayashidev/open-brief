@@ -56,19 +56,22 @@
           );
 
         openbrief = final.callPackage ./nix/package.nix {
+          codexAcp = final.openbrief-codex-acp;
           src = self;
           rustPlatform = final.makeRustPlatform {
             cargo = final.rustToolchain;
             rustc = final.rustToolchain;
           };
         };
+
+        openbrief-codex-acp = final.callPackage ./nix/codex-acp.nix { };
       };
 
       packages = forLinuxSystems (
         { pkgs, ... }:
         {
           default = pkgs.openbrief;
-          inherit (pkgs) openbrief;
+          inherit (pkgs) openbrief openbrief-codex-acp;
         }
       );
 
@@ -81,6 +84,11 @@
             meta.description = "Run the OpenBrief context recall CLI";
           };
           openbrief = self.apps.${pkgs.stdenv.hostPlatform.system}.default;
+          desktop = {
+            type = "app";
+            program = inputs.nixpkgs.lib.getExe' pkgs.openbrief "openbrief-desktop";
+            meta.description = "Run the OpenBrief desktop";
+          };
         }
       );
 
@@ -108,8 +116,17 @@
           default = pkgs.mkShell {
             packages = with pkgs; [
               rustToolchain
+              nodejs_24
+              pnpm_10
               openssl
               pkg-config
+              cairo
+              gdk-pixbuf
+              glib
+              gtk3
+              libsoup_3
+              pango
+              webkitgtk_4_1
               cargo-deny
               cargo-edit
               cargo-watch

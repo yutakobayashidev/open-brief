@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=OpenBrief
+Comment=Keep a finite brief and a thread back to your work
+Exec=openbrief-desktop
+Icon=openbrief
+Terminal=false
+Categories=Utility;Office;

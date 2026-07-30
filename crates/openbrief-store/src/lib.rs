@@ -6,7 +6,11 @@ use openbrief_core::{FocusSegment, FocusState, FocusTransition};
 use rusqlite::{Connection, OptionalExtension, Transaction, params};
 use time::{Date, Duration, OffsetDateTime, Time, UtcOffset};
 
-const SCHEMA_VERSION: i64 = 1;
+mod attention;
+
+pub use attention::{ConfirmedTriage, IngestOutcome, StoredTriageProposal};
+
+const SCHEMA_VERSION: i64 = 2;
 const RETENTION_DAYS: i64 = 7;
 
 #[derive(Debug, thiserror::Error)]
@@ -30,6 +34,16 @@ pub enum StoreError {
     InvalidTimestamp(String),
     #[error("stored segment violates the core contract: {0}")]
     InvalidSegment(#[from] openbrief_core::CoreError),
+    #[error("stored JSON is invalid: {0}")]
+    InvalidJson(#[from] serde_json::Error),
+    #[error("{entity} {id} was already ingested with different content")]
+    IdempotencyConflict { entity: &'static str, id: String },
+    #[error("{entity} was not found: {id}")]
+    NotFound { entity: &'static str, id: String },
+    #[error("triage proposal was already confirmed: {0}")]
+    AlreadyConfirmed(String),
+    #[error("confirmation selected an unknown {entity}: {id}")]
+    UnknownSelection { entity: &'static str, id: String },
 }
 
 pub type Result<T> = std::result::Result<T, StoreError>;
@@ -245,6 +259,7 @@ impl Store {
         self.purge_before(now - Duration::days(RETENTION_DAYS))
     }
 
+    #[allow(clippy::too_many_lines)]
     fn migrate(&mut self) -> Result<()> {
         let transaction = self.connection.transaction()?;
         let version: i64 =
@@ -292,8 +307,87 @@ impl Store {
 
                 PRAGMA user_version = 1;",
             )?;
-        } else if version != SCHEMA_VERSION {
+        } else if version > SCHEMA_VERSION {
             return Err(StoreError::UnsupportedSchemaVersion(version));
+        }
+
+        if version < 2 {
+            transaction.execute_batch(
+                "CREATE TABLE observation_batches (
+                    id              TEXT PRIMARY KEY,
+                    generated_at_ns INTEGER NOT NULL,
+                    payload_json    TEXT NOT NULL
+                );
+
+                CREATE INDEX observation_batches_generated
+                    ON observation_batches(generated_at_ns DESC);
+
+                CREATE TABLE observations (
+                    id              TEXT PRIMARY KEY,
+                    batch_id        TEXT NOT NULL
+                        REFERENCES observation_batches(id) ON DELETE CASCADE,
+                    source          TEXT NOT NULL,
+                    occurred_at_ns  INTEGER NOT NULL,
+                    payload_json    TEXT NOT NULL
+                );
+
+                CREATE INDEX observations_batch
+                    ON observations(batch_id, occurred_at_ns DESC);
+
+                CREATE TABLE source_coverages (
+                    batch_id        TEXT NOT NULL
+                        REFERENCES observation_batches(id) ON DELETE CASCADE,
+                    source          TEXT NOT NULL,
+                    payload_json    TEXT NOT NULL,
+                    PRIMARY KEY (batch_id, source)
+                );
+
+                CREATE TABLE brief_proposals (
+                    id              TEXT PRIMARY KEY,
+                    batch_id        TEXT NOT NULL
+                        REFERENCES observation_batches(id),
+                    created_at_ns   INTEGER NOT NULL,
+                    payload_json    TEXT NOT NULL
+                );
+
+                CREATE INDEX brief_proposals_created
+                    ON brief_proposals(created_at_ns DESC);
+
+                CREATE TABLE triage_proposals (
+                    id                TEXT PRIMARY KEY,
+                    brief_proposal_id TEXT NOT NULL
+                        REFERENCES brief_proposals(id),
+                    created_at_ns     INTEGER NOT NULL,
+                    confirmed_at_ns   INTEGER,
+                    payload_json      TEXT NOT NULL
+                );
+
+                CREATE INDEX triage_proposals_created
+                    ON triage_proposals(created_at_ns DESC);
+
+                CREATE TABLE user_decisions (
+                    id              TEXT PRIMARY KEY,
+                    proposal_id     TEXT NOT NULL
+                        REFERENCES triage_proposals(id),
+                    payload_json    TEXT NOT NULL
+                );
+
+                CREATE TABLE curiosity_captures (
+                    id              TEXT PRIMARY KEY,
+                    proposal_id     TEXT NOT NULL
+                        REFERENCES triage_proposals(id),
+                    payload_json    TEXT NOT NULL
+                );
+
+                CREATE TABLE return_anchors (
+                    id              TEXT PRIMARY KEY,
+                    proposal_id     TEXT NOT NULL
+                        REFERENCES triage_proposals(id),
+                    payload_json    TEXT NOT NULL
+                );
+
+                PRAGMA user_version = 2;",
+            )?;
         }
 
         transaction.commit()?;
@@ -570,7 +664,21 @@ mod tests {
                 .collect::<std::result::Result<Vec<_>, _>>()
                 .unwrap()
         };
-        assert_eq!(tables, vec!["collector_state", "focus_segments"]);
+        assert_eq!(
+            tables,
+            vec![
+                "brief_proposals",
+                "collector_state",
+                "curiosity_captures",
+                "focus_segments",
+                "observation_batches",
+                "observations",
+                "return_anchors",
+                "source_coverages",
+                "triage_proposals",
+                "user_decisions",
+            ]
+        );
     }
 
     #[test]

@@ -16,3 +16,7 @@ index.android.bundle
 
 # Rust build output
 /target/
+
+# Desktop frontend output
+/apps/desktop/dist/
+/apps/desktop/node_modules/

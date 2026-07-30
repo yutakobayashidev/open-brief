@@ -4,6 +4,9 @@
 
 - Accepted: 2026-07-21
 - Clarified for self-hosted off-device inference: 2026-07-29
+- Brief生成runtimeを[ADR 0003](0003-adopt-proposal-only-acp-agent-boundary.md)で明確化: 2026-07-30
+
+ADR 0003により、現在のMVPではBrief生成と自然言語triageをACP Agentへ委任し、Model Gatewayは将来の`observe_frame`等のbounded model taskに限定します。以下の`generate_brief`は初期の選択肢を記録した概念例であり、現在のMVP contractではありません。
 
 ## Decision
 
